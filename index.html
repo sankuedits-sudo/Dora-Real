@@ -1,0 +1,2557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>Dora Dora - EdTech Learning App & Admin Panel</title>
+    
+    <!-- Firebase SDK Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <!-- HLS.js CDN for Live Stream (.m3u8) Support -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            background-color: #0f0f0f;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .phone-container {
+            width: 100%;
+            max-width: 412px;
+            height: 100vh;
+            max-height: 860px;
+            background-color: #0f0f0f;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.9);
+            border-radius: 40px;
+        }
+
+        .phone-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            min-height: 100%;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* LOGIN SCREEN */
+        .login-screen {
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            text-align: center;
+            background: linear-gradient(135deg, #0f0f0f 0%, #212121 100%);
+        }
+
+        .login-logo {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ff0000;
+            font-family: serif;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+
+        .login-subtitle {
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            width: 100%;
+            margin-bottom: 12px;
+            text-align: left;
+        }
+
+        .input-group label {
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 10px;
+            background: #222;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .btn-full {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            background: #ff0000;
+            color: #fff;
+            margin-top: 10px;
+        }
+
+        /* SEARCH BAR */
+        .search-box {
+            padding: 10px 15px;
+            background: #0f0f0f;
+            position: sticky;
+            top: 57px;
+            z-index: 9;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 15px;
+            background: #181818;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 20px;
+            font-size: 12px;
+            outline: none;
+        }
+
+        /* HEADERS & NAVIGATION */
+        .home-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: #0f0f0f;
+            border-bottom: 1px solid #222;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .home-logo {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ff0000;
+            letter-spacing: 1px;
+        }
+
+        .header-icons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .icon-btn {
+            background: #222;
+            border: none;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .feed-container {
+            padding: 15px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* STATS CARD FOR ADMIN */
+        .admin-stats-box {
+            background: #181818;
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* COURSE CARD WITH FAVOURITE HEART */
+        .course-grid-card {
+            background: #181818;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 16px;
+            position: relative;
+            border: 1px solid #222;
+        }
+
+        .course-thumb-container {
+            position: relative;
+            width: 100%;
+            height: 180px;
+            background: #000;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .course-grid-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .fav-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            z-index: 5;
+        }
+
+        .course-grid-info {
+            padding: 12px;
+            cursor: pointer;
+        }
+
+        .course-grid-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 3px;
+        }
+
+        .course-grid-desc {
+            font-size: 11px;
+            color: #aaa;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* FOLDER CARDS (SUBJECTS) */
+        .folder-card {
+            background: #181818;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #333;
+            cursor: pointer;
+        }
+
+        /* YOUTUBE LIST STYLE LECTURE ITEM */
+        .yt-list-item {
+            display: flex;
+            gap: 12px;
+            background: #181818;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border: 1px solid #262626;
+            cursor: pointer;
+        }
+
+        .yt-list-thumb {
+            width: 130px;
+            height: 75px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: #000;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .yt-list-duration {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            font-size: 9px;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        .yt-list-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .yt-list-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .yt-list-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .action-chip {
+            background: linear-gradient(135deg, #2a2a2a, #1f1f1f);
+            color: #fff;
+            border: 1px solid #444;
+            padding: 7px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+            transition: all 0.2s;
+        }
+
+        .action-chip:hover {
+            background: linear-gradient(135deg, #ff0000, #cc0000);
+            border-color: #ff5555;
+        }
+
+        .back-nav-bar {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #0f0f0f;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid #222;
+        }
+
+        .back-btn {
+            background: #222;
+            border: none;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        /* ADMIN STYLES */
+        .admin-screen {
+            padding: 20px;
+            background: #0f0f0f;
+            overflow-y: auto;
+        }
+
+        .admin-row {
+            background: #181818;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #333;
+        }
+
+        .sub-page {
+            display: none;
+            flex-direction: column;
+            min-height: 100%;
+            background: #0f0f0f;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 50;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .sub-page.active {
+            display: flex;
+        }
+
+        /* FULL SCREEN MODAL & PLAYER */
+        .modal-container {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-container.active { display: flex; }
+        
+        .modal-body {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .modal-body video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+
+        .modal-body iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #fff;
+        }
+
+        /* TOP-LEFT COMPACT SETTINGS GEAR & DROPUP */
+        .player-settings-container {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            z-index: 1060;
+        }
+
+        .gear-toggle-btn {
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .gear-toggle-btn:hover {
+            background: rgba(0, 0, 0, 0.85);
+            transform: scale(1.05);
+        }
+
+        .quality-menu-popup {
+            position: absolute;
+            top: 42px;
+            left: 0;
+            background: rgba(18, 18, 18, 0.95);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 6px;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 120px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .quality-menu-popup.open {
+            display: flex;
+        }
+
+        .quality-item-btn {
+            background: transparent;
+            color: #ddd;
+            border: none;
+            padding: 8px 12px;
+            text-align: left;
+            font-size: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .quality-item-btn:hover {
+            background: #2a2a2a;
+            color: #fff;
+        }
+
+        .quality-item-btn.active {
+            color: #24a1ee;
+            font-weight: bold;
+        }
+
+        /* WHATSAPP CHANNEL JOIN POPUP */
+        .wa-channel-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.82);
+            z-index: 3000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            backdrop-filter: blur(3px);
+        }
+        .wa-channel-modal.active { display: flex; }
+        .wa-channel-card {
+            width: 100%;
+            max-width: 330px;
+            background: linear-gradient(180deg, #202020 0%, #151515 100%);
+            border: 1px solid #333;
+            border-radius: 18px;
+            padding: 24px 20px 20px;
+            text-align: center;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.8);
+        }
+        .wa-channel-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            box-shadow: 0 5px 18px rgba(37,211,102,0.25);
+            border-radius: 50%;
+        }
+        .wa-channel-icon svg {
+            width: 64px;
+            height: 64px;
+            display: block;
+        }
+        .wa-channel-card h3 {
+            font-size: 19px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        .wa-channel-card p {
+            font-size: 12px;
+            line-height: 1.5;
+            color: #aaa;
+            margin-bottom: 18px;
+        }
+        .wa-join-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border-radius: 9px;
+            background: #25D366;
+            color: #071b0d;
+            font-size: 14px;
+            font-weight: 800;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 11px;
+        }
+        .wa-do-not-show-btn {
+            width: 100%;
+            padding: 10px;
+            border-radius: 9px;
+            background: transparent;
+            color: #aaa;
+            border: 1px solid #444;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .wa-do-not-show-btn:hover { background: #242424; color: #fff; }
+
+        /* LANGUAGE SELECTION POPUP MODAL */
+        .lang-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .lang-modal.active { display: flex; }
+        .lang-card {
+            background: #181818;
+            border: 1px solid #333;
+            border-radius: 16px;
+            padding: 25px 20px;
+            width: 100%;
+            max-width: 300px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .lang-card h3 {
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        .lang-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+            margin-bottom: 10px;
+            display: block;
+            text-align: center;
+            text-decoration: none;
+        }
+        .lang-btn-en { background: #24a1ee; color: #fff; }
+        .lang-btn-hi { background: #ff0000; color: #fff; }
+        .lang-close-btn {
+            background: transparent;
+            color: #aaa;
+            border: none;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        /* DOWNLOADED ITEM CARD */
+        .download-item-card {
+            background: #181818;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #333;
+        }
+
+        /* FIXED TELEGRAM FLOATING ICON BUTTON */
+        .floating-tg-btn {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: #24a1ee;
+            color: #ffffff;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(36, 161, 238, 0.6);
+            z-index: 999;
+            text-decoration: none;
+            transition: transform 0.2s ease;
+            border: 2px solid #ffffff;
+        }
+        .floating-tg-btn:hover {
+            transform: scale(1.08);
+        }
+        .floating-tg-btn svg {
+            width: 30px;
+            height: 30px;
+            fill: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="phone-container">
+
+        <!-- LOGIN SCREEN -->
+        <div id="loginScreen" class="screen login-screen active">
+            <div class="login-logo">DORA DORA</div>
+            <div class="login-subtitle">EdTech Learning Portal</div>
+            
+            <div class="input-group">
+                <label>Mobile Number (10 Digit)</label>
+                <input type="text" id="loginUser" placeholder="Enter 10 digit mobile number" maxlength="10">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="loginPass" placeholder="••••••••">
+            </div>
+
+            <button class="btn-full" onclick="handleLogin()">Sign In</button>
+        </div>
+
+        <!-- USER HOME SCREEN (COURSES) -->
+        <div id="homeScreen" class="screen">
+            <div class="home-header">
+                <div class="home-logo">DORA DORA</div>
+                <div class="header-icons">
+                    <button class="icon-btn" onclick="openDownloadsScreen()" style="background:#24a1ee;">📥 Downloads</button>
+                    <button class="icon-btn" onclick="handleLogout()">Logout</button>
+                </div>
+            </div>
+            <div class="search-box">
+                <input type="text" class="search-input" placeholder="🔍 Search courses..." oninput="filterCourses(this.value)">
+            </div>
+            <div class="feed-container">
+                <div class="section-title">My Favourites ⭐</div>
+                <div id="favCoursesContainer" style="margin-bottom: 20px;"></div>
+
+                <div class="section-title">Available Courses</div>
+                <div id="coursesGridContainer"></div>
+            </div>
+
+            <!-- FIXED TELEGRAM FLOATING ICON BUTTON -->
+            <a id="floatingTgBtn" href="https://t.me/" target="_blank" class="floating-tg-btn" title="Join Telegram">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.99 1.27-5.62 3.72-.53.36-1.01.54-1.44.53-.47-.02-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.25.38-.51 1.05-.78 4.11-1.79 6.85-2.97 8.23-3.55 3.91-1.66 4.72-1.95 5.25-1.96.12 0 .38.03.55.17.14.12.18.28.2.4-.02.07-.02.13-.04.28z"/>
+                </svg>
+            </a>
+        </div>
+
+        <!-- SUBJECT LIST SCREEN (USER) -->
+        <div id="subjectScreen" class="screen">
+            <div class="back-nav-bar">
+                <button class="back-btn" onclick="goBackToHome()">‹ Courses</button>
+                <span id="navCourseTitleHeader" style="font-size:12px; font-weight:bold; color:#fff;">COURSE</span>
+                <div style="width:40px;"></div>
+            </div>
+            <div class="feed-container">
+                <div class="section-title">Subjects</div>
+                <div id="subjectsContainer"></div>
+            </div>
+        </div>
+
+        <!-- CHAPTER LIST SCREEN (USER) -->
+        <div id="chapterScreen" class="screen">
+            <div class="back-nav-bar">
+                <button class="back-btn" onclick="openSubjectList()">‹ Subjects</button>
+                <span id="navChapterTitleHeader" style="font-size:12px; font-weight:bold; color:#fff;">SUBJECT</span>
+                <div style="width:40px;"></div>
+            </div>
+            <div class="feed-container">
+                <div class="section-title">Chapters</div>
+                <div id="chaptersContainer"></div>
+            </div>
+        </div>
+
+        <!-- LECTURES & ATTACHED FILES SCREEN (USER) -->
+        <div id="lectureScreen" class="screen">
+            <div class="back-nav-bar">
+                <button class="back-btn" onclick="goBackToChapters()">‹ Chapters</button>
+                <span id="navSubjectTitleHeader" style="font-size:12px; font-weight:bold; color:#fff;">SUBJECT</span>
+                <div style="width:40px;"></div>
+            </div>
+            <div class="search-box" style="top: 0; background: #0f0f0f;">
+                <input type="text" class="search-input" id="lectureSearchInput" placeholder="🔍 Search lectures by title..." oninput="filterLectures(this.value)">
+            </div>
+            <div class="feed-container">
+                <div class="section-title">Lectures & Study Files</div>
+                <div id="lecturesContainer"></div>
+            </div>
+        </div>
+
+        <!-- DOWNLOADED NOTES MANAGER SCREEN -->
+        <div id="downloadsScreen" class="screen">
+            <div class="back-nav-bar">
+                <button class="back-btn" onclick="goBackToHome()">‹ Home</button>
+                <span style="font-size:13px; font-weight:bold; color:#24a1ee;">Downloaded Class Notes</span>
+                <div style="width:40px;"></div>
+            </div>
+            <div class="feed-container">
+                <div class="section-title">
+                    <span>Saved PDF Files</span>
+                    <button onclick="clearAllDownloads()" style="background:#8b0000; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer;">Clear All</button>
+                </div>
+                <div id="downloadedNotesList"></div>
+            </div>
+        </div>
+
+        <!-- ADMIN PANEL HOME -->
+        <div id="adminScreen" class="screen admin-screen">
+            <div class="admin-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #222; padding-bottom:10px;">
+                <h2 style="font-size:16px; color:#ff0000;">Admin Dashboard</h2>
+                <button class="icon-btn" onclick="handleLogout()">Logout</button>
+            </div>
+
+            <div class="admin-stats-box">
+                <div>
+                    <div style="font-size:11px; color:#aaa;">Total Registered Users</div>
+                    <div id="totalUsersCount" style="font-size:20px; font-weight:bold; color:#24a1ee;">0</div>
+                </div>
+                <div style="font-size:24px;">👥</div>
+            </div>
+
+            <div style="background:#181818; padding:12px; border-radius:8px; border:1px solid #333; margin-bottom:15px;">
+                <label style="font-size:11px; color:#aaa; display:block; margin-bottom:4px;">Telegram Channel Link</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="adminTgLinkInput" placeholder="https://t.me/yourchannel" style="flex:1; padding:8px; background:#222; border:1px solid #444; color:#fff; border-radius:6px; font-size:11px;">
+                    <button onclick="saveTelegramLink()" style="background:#0088cc; color:white; border:none; padding:8px 12px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:bold;">Save</button>
+                </div>
+            </div>
+
+            <div style="background:#181818; padding:12px; border-radius:8px; border:1px solid #333; margin-bottom:15px;">
+                <label style="font-size:11px; color:#aaa; display:block; margin-bottom:4px;">WhatsApp Channel Link (Join Popup)</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="adminWaLinkInput" placeholder="https://whatsapp.com/channel/yourchannel" style="flex:1; padding:8px; background:#222; border:1px solid #444; color:#fff; border-radius:6px; font-size:11px;">
+                    <button onclick="saveWhatsAppLink()" style="background:#25D366; color:#071b0d; border:none; padding:8px 12px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:bold;">Save</button>
+                </div>
+                <div style="font-size:10px; color:#777; margin-top:6px;">This link controls the Join button in the popup.</div>
+            </div>
+
+            <!-- FORCE SHOW WHATSAPP POPUP TO ALL USERS -->
+            <div style="background:#181818; padding:12px; border-radius:8px; border:1px solid #333; margin-bottom:15px;">
+                <label style="font-size:11px; color:#aaa; display:block; margin-bottom:4px;">Reset WhatsApp Channel Popup</label>
+                <button class="btn-full" style="background:#25D366; color:#071b0d; margin-top:0; font-size:12px; padding:10px;" onclick="forceWhatsAppPopupToAllUsers()">📢 Force WhatsApp Popup To All Users</button>
+                <div style="font-size:10px; color:#777; margin-top:6px;">Is button par click karne se sabhi users ko fir se WhatsApp join popup show hoga.</div>
+            </div>
+
+            <button class="btn-full" style="margin-bottom:15px;" onclick="openAddCoursePage()">+ Add New Course</button>
+            <div class="section-title">All Courses</div>
+            <div id="adminCoursesList"><p style="color:#777; font-size:12px;">Loading courses...</p></div>
+        </div>
+
+        <!-- SUB-PAGE: ADD COURSE -->
+        <div id="addCoursePage" class="sub-page">
+            <div class="back-nav-bar" style="margin:-20px -20px 20px -20px;">
+                <button class="back-btn" onclick="closeAddCoursePage()">‹ Cancel</button>
+                <span style="font-size:13px; font-weight:bold; color:#ff0000;">Add Course</span>
+                <div style="width:40px;"></div>
+            </div>
+            <div class="input-group"><label>Course Name</label><input type="text" id="newCourseName" placeholder="e.g. SSC CGL Complete Batch"></div>
+            <div class="input-group"><label>Description</label><textarea id="newCourseDesc" rows="3" placeholder="Batch overview..."></textarea></div>
+            <div class="input-group"><label>Thumbnail Image</label><input type="file" id="newCourseImgFile" accept="image/*"></div>
+            <button class="btn-full" onclick="addNewCourse()">Save Course</button>
+        </div>
+
+        <!-- SUB-PAGE: MANAGE SUBJECTS -->
+        <div id="adminSubjectsPage" class="sub-page">
+            <div class="back-nav-bar" style="margin:-20px -20px 20px -20px;">
+                <button class="back-btn" onclick="closeAdminSubjects()">‹ Back</button>
+                <span id="adminCourseTitle" style="font-size:13px; font-weight:bold; color:#ff0000;">Manage Course</span>
+                <button class="icon-btn" style="background:#8b0000; color:#fff;" onclick="deleteCurrentCourse()">Delete Course</button>
+            </div>
+            <div class="feed-container" style="padding:15px 0;">
+                <div class="input-group"><label>Add Subject (e.g. Physics, History)</label><input type="text" id="newSubjectName" placeholder="Subject name"></div>
+                <button class="btn-full" style="margin-bottom:20px;" onclick="addNewSubject()">+ Add Subject</button>
+                <div class="section-title">Course Subjects</div>
+                <div id="adminSubjectsList"></div>
+            </div>
+        </div>
+
+        <!-- SUB-PAGE: MANAGE CHAPTERS INSIDE A SUBJECT -->
+        <div id="adminChaptersPage" class="sub-page">
+            <div class="back-nav-bar" style="margin:-20px -20px 20px -20px;">
+                <button class="back-btn" onclick="closeAdminChapters(); openAdminSubjects(activeCourseKey);">‹ Subjects</button>
+                <span id="adminSubjectTitleHeader" style="font-size:13px; font-weight:bold; color:#ff0000;">Manage Chapters</span>
+                <div style="width:40px;"></div>
+            </div>
+            <div class="feed-container" style="padding:15px 0;">
+                <div class="input-group"><label>Add Chapter (e.g. Motion, Force, Gravitation)</label><input type="text" id="newChapterName" placeholder="Chapter name"></div>
+                <button class="btn-full" style="margin-bottom:20px;" onclick="addNewChapter()">+ Add Chapter</button>
+                <div class="section-title">Subject Chapters</div>
+                <div id="adminChaptersList"></div>
+            </div>
+        </div>
+
+        <!-- SUB-PAGE: MANAGE LECTURES INSIDE A SUBJECT -->
+        <div id="adminLecturesPage" class="sub-page">
+            <div class="back-nav-bar" style="margin:-20px -20px 20px -20px;">
+                <button class="back-btn" onclick="openAdminChapters(activeSubjectName)">‹ Chapters</button>
+                <span id="adminLectureTitleHeader" style="font-size:13px; font-weight:bold; color:#ff0000;">Chapter Lectures</span>
+                <button class="icon-btn" style="background:#ff0000; color:#fff; font-weight:bold;" onclick="openAddLecturePage()">+ Add Lecture</button>
+            </div>
+            <div class="feed-container" style="padding:15px 0;">
+                <div class="section-title">Uploaded Lectures</div>
+                <div id="adminLecturesList"></div>
+            </div>
+        </div>
+
+        <!-- SUB-PAGE: ADD / EDIT LECTURE & DETAILS -->
+        <div id="editLecturePage" class="sub-page">
+            <div class="back-nav-bar" style="margin:-20px -20px 20px -20px;">
+                <button class="back-btn" onclick="closeEditLecturePage()">‹ Cancel</button>
+                <span style="font-size:13px; font-weight:bold; color:#ff0000;" id="lectureFormHeading">Add Lecture</span>
+                <div style="width:40px;"></div>
+            </div>
+            <input type="hidden" id="editingLecIdx">
+            
+            <div class="input-group"><label>Lecture Title (e.g. 4. Average [27-5-26])</label><input type="text" id="lecFormTitle" placeholder="e.g. 4. Average"></div>
+            <div class="input-group"><label>Description / Topic</label><textarea id="lecFormDesc" rows="2" placeholder="Details..."></textarea></div>
+            <div class="input-group"><label>Duration</label><input type="text" id="lecFormDuration" value="45:00"></div>
+            
+            <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+            
+            <div class="input-group">
+                <label style="color:#ff3333; font-weight:bold;">🔴 Video / Live URL (.m3u8, direct video, or YouTube)</label>
+                <input type="text" id="lecFormLiveStreamUrl" placeholder="Paste .m3u8 link, /dl/ or /stream/ video link, or YouTube">
+            </div>
+
+            <div style="color:#24a1ee; font-weight:bold; font-size:11px; margin: 10px 0 6px 0;">OR Multi-Quality MP4 Video URLs:</div>
+            
+            <div class="input-group">
+                <label style="color:#aaa;">240p Video URL (Optional)</label>
+                <input type="text" id="lecFormVideo240" placeholder="Paste 240p link">
+            </div>
+            <div class="input-group">
+                <label style="color:#aaa;">360p Video URL (Optional)</label>
+                <input type="text" id="lecFormVideo360" placeholder="Paste 360p link">
+            </div>
+            <div class="input-group">
+                <label style="color:#aaa;">480p Video URL (Optional)</label>
+                <input type="text" id="lecFormVideo480" placeholder="Paste 480p link">
+            </div>
+            <div class="input-group">
+                <label style="color:#aaa;">720p Video URL (Optional)</label>
+                <input type="text" id="lecFormVideo720" placeholder="Paste 720p link">
+            </div>
+
+            <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
+            <div class="input-group"><label>Thumbnail Image URL (Optional)</label><input type="text" id="lecFormThumbUrl" placeholder="Paste image link"></div>
+            <div class="input-group"><label>Class Notes PDF Links (Multiple separated by comma)</label><textarea id="lecFormNotesUrl" rows="2" placeholder="https://link1.pdf, https://link2.pdf"></textarea></div>
+            <div class="input-group"><label>HTML Quiz Links [1st: English, 2nd: Hindi separated by comma]</label><textarea id="lecFormQuizUrl" rows="2" placeholder="https://english-quiz.html, https://hindi-quiz.html"></textarea></div>
+
+            <button class="btn-full" onclick="saveLectureData()">Save Lecture to Cloud</button>
+            <button class="btn-full" id="deleteLecBtn" style="background:#8b0000; margin-top:10px; display:none;" onclick="deleteCurrentLecture()">Delete Lecture</button>
+        </div>
+
+    </div>
+
+    <!-- WHATSAPP CHANNEL JOIN POPUP -->
+    <div class="wa-channel-modal" id="waChannelModal">
+        <div class="wa-channel-card">
+            <div class="wa-channel-icon" aria-label="WhatsApp">
+            <svg viewBox="0 0 32 32" width="48" height="48" aria-hidden="true">
+                <circle cx="16" r="16" fill="#25D366"/>
+                <path fill="#fff" d="M23.45 8.55A10.43 10.43 0 0 0 16.02 5.5c-5.78 0-10.48 4.7-10.48 10.48 0 1.85.48 3.65 1.4 5.23L5.45 26.5l5.42-1.42a10.47 10.47 0 0 0 5.15 1.35h.01c5.78 0 10.48-4.7 10.48-10.48 0-2.8-1.09-5.43-3.06-7.4Zm-7.43 16.1h-.01a8.68 8.68 0 0 1-4.42-1.21l-.32-.19-3.22.84.86-3.14-.21-.32a8.67 8.67 0 0 1-1.33-4.65c0-4.8 3.91-8.71 8.72-8.71a8.65 8.65 0 0 1 6.17 2.56 8.66 8.66 0 0 1 2.55 6.18c0 4.8-3.91 8.71-8.71 8.71Zm4.78-6.53c-.26-.13-1.53-.75-1.77-.84-.24-.09-.41-.13-.58.13-.17.26-.67.84-.82 1.01-.15.17-.3.2-.56.07-.26-.13-1.08-.4-2.06-1.27-.76-.68-1.27-1.51-1.42-1.77-.15-.26-.02-.4.11-.53.12-.12.26-.3.39-.45.13-.15.17-.26.26-.43.09-.17.04-.32-.02-.45-.07-.13-.58-1.4-.8-1.92-.21-.5-.42-.43-.58-.44h-.49c-.17 0-.45.06-.69.32-.24.26-.91.89-.91 2.17s.93 2.52 1.06 2.69c.13.17 1.83 2.79 4.43 3.91.62.27 1.1.43 1.47.55.62.2 1.18.17 1.62.1.5-.07 1.53-.63 1.75-1.24.22-.61.22-1.13.15-1.24-.06-.11-.24-.17-.5-.3Z"/>
+            </svg>
+        </div>
+            <h3>Join WhatsApp Channel</h3>
+            <p>Get the latest lectures, updates and important announcements directly on our WhatsApp Channel.</p>
+            <a id="waJoinBtn" class="wa-join-btn" href="https://whatsapp.com/" target="_blank" rel="noopener">Join WhatsApp Channel</a>
+            <button class="wa-do-not-show-btn" onclick="disableWhatsAppPopup()">Do not show again</button>
+        </div>
+    </div>
+
+    <!-- FULLSCREEN UNIVERSAL MEDIA/VIEWER MODAL (NO CLOSE BUTTON) -->
+    <div class="modal-container" id="universalModal">
+        <!-- TOP-LEFT COMPACT SETTINGS GEAR & DROPUP -->
+        <div class="player-settings-container" id="playerSettingsContainer" style="display:none;">
+            <button class="gear-toggle-btn" id="gearToggleBtn" onclick="toggleQualityMenu(event)" title="Select Quality">⚙️</button>
+            <div class="quality-menu-popup" id="qualityMenuPopup"></div>
+        </div>
+        <div class="modal-body" id="modalBodyContent"></div>
+    </div>
+
+    <!-- LANGUAGE SELECTION MODAL -->
+    <div class="lang-modal" id="languageModal">
+        <div class="lang-card">
+            <h3>Select Quiz Language</h3>
+            <div id="langButtonsContainer"></div>
+            <button class="lang-close-btn" onclick="closeLanguageModal()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            databaseURL: "https://dora-dora-2e0e6-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const rtdb = firebase.database();
+
+        let coursesData = {};
+        let appSettings = {};
+        let allUsersData = {};
+        let isCoursesLoaded = false;
+        let currentUser = localStorage.getItem('doradoraUser') || null;
+        let favourites = JSON.parse(localStorage.getItem('doradoraFavs')) || [];
+        let downloadedNotes = JSON.parse(localStorage.getItem('dora_downloads')) || [];
+        let activeCourseKey = null;
+        let activeSubjectName = null;
+        let activeChapterName = null;
+        let waPopupShownThisSession = false;
+
+        // Video playback & HLS tracking
+        let currentLectureVideos = {};
+        let currentSelectedQuality = null;
+        let activeVideoTag = null;
+        let currentHlsInstance = null;
+
+        // ================= INDEXEDDB STORAGE SYSTEM (CACHE 50MB+ EASILY) =================
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('DoraDoraLocalDB', 1);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('cache')) {
+                        db.createObjectStore('cache');
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        async function getCachedData(key) {
+            try {
+                const db = await openDB();
+                return new Promise((resolve) => {
+                    const tx = db.transaction('cache', 'readonly');
+                    const store = tx.objectStore('cache');
+                    const req = store.get(key);
+                    req.onsuccess = () => resolve(req.result || null);
+                    req.onerror = () => resolve(null);
+                });
+            } catch(e) {
+                return null;
+            }
+        }
+
+        async function setCachedData(key, value) {
+            try {
+                const db = await openDB();
+                const tx = db.transaction('cache', 'readwrite');
+                tx.objectStore('cache').put(value, key);
+            } catch(e) {
+                console.error("IndexedDB cache save error:", e);
+            }
+        }
+
+        function markDataAsUpdated() {
+            rtdb.ref('lastUpdated').set(Date.now());
+        }
+
+        window.onload = async function() {
+            // 1. FAST OFFLINE LAUNCH (< 0.2 Sec): IndexedDB se load karein
+            const cachedCourses = await getCachedData('doradora_cached_courses');
+            if (cachedCourses && typeof cachedCourses === 'object' && Object.keys(cachedCourses).length > 0) {
+                coursesData = cachedCourses;
+                isCoursesLoaded = true;
+                if (currentUser && currentUser !== '1111') {
+                    renderUserCourses();
+                }
+            }
+
+            // Realtime listeners for lightweight info
+            rtdb.ref('settings').on('value', (snapshot) => {
+                appSettings = snapshot.val() || {};
+                const tgLink = appSettings.telegramLink || 'https://t.me/';
+                const floatBtn = document.getElementById('floatingTgBtn');
+                if(floatBtn) floatBtn.href = tgLink;
+                const adminInput = document.getElementById('adminTgLinkInput');
+                if(adminInput) adminInput.value = tgLink;
+
+                const waLink = appSettings.whatsappChannelLink || 'https://whatsapp.com/';
+                const waJoinBtn = document.getElementById('waJoinBtn');
+                if(waJoinBtn) waJoinBtn.href = waLink;
+                const waAdminInput = document.getElementById('adminWaLinkInput');
+                if(waAdminInput) waAdminInput.value = appSettings.whatsappChannelLink || '';
+
+                // Force reset logic: Server version vs Local version
+                const serverWaVersion = Number(appSettings.waPopupVersion) || 0;
+                const localWaVersion = Number(localStorage.getItem('doraWhatsAppPopupDisabledVersion')) || 0;
+                if (serverWaVersion > localWaVersion) {
+                    localStorage.removeItem('doraWhatsAppPopupDisabled');
+                }
+            });
+
+            rtdb.ref('users').on('value', (snapshot) => {
+                allUsersData = snapshot.val() || {};
+                const count = Object.keys(allUsersData).length;
+                const countElem = document.getElementById('totalUsersCount');
+                if(countElem) countElem.innerText = count;
+            });
+
+            // 2. SMART DATA SYNC: Har baar 58MB download nahi hoga
+            rtdb.ref('lastUpdated').on('value', async (snap) => {
+                const serverTimestamp = snap.val() || 0;
+                const localTimestamp = Number(localStorage.getItem('doradora_courses_timestamp')) || 0;
+
+                if (serverTimestamp > localTimestamp || !cachedCourses || currentUser === '1111') {
+                    rtdb.ref('courses').once('value').then(async (coursesSnap) => {
+                        coursesData = coursesSnap.val() || {};
+                        isCoursesLoaded = true;
+                        await setCachedData('doradora_cached_courses', coursesData);
+                        localStorage.setItem('doradora_courses_timestamp', serverTimestamp || Date.now());
+
+                        if (currentUser) {
+                            if (currentUser === '1111') {
+                                renderAdminCoursesList();
+                                if(activeCourseKey && coursesData[activeCourseKey]) {
+                                    renderAdminSubjectsList();
+                                    if(activeSubjectName && coursesData[activeCourseKey].subjects && coursesData[activeCourseKey].subjects[activeSubjectName]) {
+                                        renderAdminChaptersList();
+                                        if (activeChapterName !== null) renderAdminLecturesList();
+                                    }
+                                }
+                            } else {
+                                renderUserCourses();
+                            }
+                        }
+                    });
+                } else {
+                    isCoursesLoaded = true;
+                }
+            });
+
+            if (currentUser) {
+                if (currentUser === '1111') {
+                    switchScreen('adminScreen', false);
+                } else {
+                    switchScreen('homeScreen', false);
+                    renderUserCourses();
+                }
+            } else {
+                switchScreen('loginScreen', false);
+            }
+
+            // PHONE BACK BUTTON LISTENER - Stop background media on popstate
+            window.addEventListener('popstate', function(event) {
+                closeModal();
+                if (event.state && event.state.screen) {
+                    navigateToScreenDirect(event.state.screen, false);
+                } else {
+                    navigateToScreenDirect('homeScreen', false);
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                const container = document.getElementById('playerSettingsContainer');
+                if (container && !container.contains(e.target)) {
+                    const popup = document.getElementById('qualityMenuPopup');
+                    if(popup) popup.classList.remove('open');
+                }
+            });
+        };
+
+        function showWhatsAppPopup(link) {
+            if (!currentUser || currentUser === '1111') return;
+
+            const currentScreen = document.querySelector('.screen.active');
+            if (!currentScreen || currentScreen.id !== 'homeScreen') return;
+
+            const modal = document.getElementById('waChannelModal');
+            const joinBtn = document.getElementById('waJoinBtn');
+            if(!modal || localStorage.getItem('doraWhatsAppPopupDisabled') || waPopupShownThisSession) return;
+            
+            waPopupShownThisSession = true;
+            if(link) joinBtn.href = link;
+            modal.classList.add('active');
+        }
+
+        function disableWhatsAppPopup() {
+            localStorage.setItem('doraWhatsAppPopupDisabled', '1');
+            const currentServerVersion = (appSettings && appSettings.waPopupVersion) ? appSettings.waPopupVersion : Date.now();
+            localStorage.setItem('doraWhatsAppPopupDisabledVersion', currentServerVersion);
+            const modal = document.getElementById('waChannelModal');
+            if(modal) modal.classList.remove('active');
+        }
+
+        function forceWhatsAppPopupToAllUsers() {
+            if(confirm("Kya aap sabhi users ke liye WhatsApp popup fir se force-enable karna chahte hain?")) {
+                const newVersion = Date.now();
+                rtdb.ref('settings/waPopupVersion').set(newVersion, (err) => {
+                    if(!err) {
+                        alert("Safalta se update ho gaya! Ab sabhi users ko WhatsApp channel join popup dobara dikhai dega.");
+                    } else {
+                        alert("Error: " + err.message);
+                    }
+                });
+            }
+        }
+
+        function saveWhatsAppLink() {
+            const input = document.getElementById('adminWaLinkInput');
+            const link = input ? input.value.trim() : '';
+            if(!link) { alert('Enter a valid WhatsApp Channel link'); return; }
+            if(!/^https?:\/\/([a-z0-9-]+\.)*whatsapp\.com\//i.test(link)) {
+                alert('Please enter a valid WhatsApp link. Example: https://whatsapp.com/channel/XXXXXXXX');
+                return;
+            }
+            rtdb.ref('settings/whatsappChannelLink').set(link, (err) => {
+                if(!err) alert('WhatsApp Channel link updated successfully!');
+                else alert('Error: ' + err.message);
+            });
+        }
+
+        function saveTelegramLink() {
+            const link = document.getElementById('adminTgLinkInput').value.trim();
+            if(!link) { alert('Enter valid Telegram link'); return; }
+            rtdb.ref('settings/telegramLink').set(link, (err) => {
+                if(!err) alert('Telegram link updated successfully!');
+            });
+        }
+
+        function switchScreen(screenId, pushHistory = true) {
+            closeModal(); // Ensure video/audio completely stops whenever screen changes
+            if (pushHistory) {
+                history.pushState({ screen: screenId }, "", "");
+            }
+            navigateToScreenDirect(screenId, true);
+        }
+
+        function navigateToScreenDirect(screenId, scrollReset = true) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+                if (scrollReset) {
+                    const phoneContainer = document.querySelector('.phone-container');
+                    if (phoneContainer) phoneContainer.scrollTop = 0;
+                }
+            }
+        }
+
+        function handleLogin() {
+            const user = document.getElementById('loginUser').value.trim();
+            const pass = document.getElementById('loginPass').value.trim();
+            
+            if (!user || !pass) { 
+                alert('Please enter both mobile number and password'); 
+                return; 
+            }
+
+            if (user === '1111' && pass === '1234') {
+                currentUser = '1111';
+                localStorage.setItem('doradoraUser', currentUser);
+                switchScreen('adminScreen');
+                renderAdminCoursesList();
+                return;
+            }
+
+            const phoneRegex = /^[6-9]\d{9}$/;
+            if (!phoneRegex.test(user)) {
+                alert('Please enter a valid 10-digit Indian mobile number');
+                return;
+            }
+
+            const sanitizedPhone = user.replace(/[.#$\/\[\]]/g, '_');
+            const userRef = rtdb.ref('users/' + sanitizedPhone);
+
+            userRef.once('value', (snapshot) => {
+                if (!snapshot.exists()) {
+                    userRef.set({
+                        phone: user,
+                        createdAt: new Date().toISOString()
+                    });
+                }
+                currentUser = user;
+                localStorage.setItem('doradoraUser', currentUser);
+                switchScreen('homeScreen');
+                renderUserCourses();
+            });
+        }
+
+        function handleLogout() {
+            closeModal();
+            currentUser = null;
+            waPopupShownThisSession = false;
+            localStorage.removeItem('doradoraUser');
+            document.querySelectorAll('.sub-page').forEach(p => p.classList.remove('active'));
+            switchScreen('loginScreen');
+        }
+
+        function toggleFavourite(courseKey, event) {
+            event.stopPropagation();
+            if (favourites.includes(courseKey)) {
+                favourites = favourites.filter(k => k !== courseKey);
+            } else {
+                favourites.push(courseKey);
+            }
+            localStorage.setItem('doradoraFavs', JSON.stringify(favourites));
+            renderUserCourses();
+        }
+
+        function renderUserCourses(filterQuery = '') {
+            const container = document.getElementById('coursesGridContainer');
+            const favContainer = document.getElementById('favCoursesContainer');
+            container.innerHTML = '';
+            favContainer.innerHTML = '';
+
+            const keys = Object.keys(coursesData || {});
+
+            if (!isCoursesLoaded) {
+                container.innerHTML = `
+                    <div style="background:#181818; border:1px solid #333; padding:20px; border-radius:12px; text-align:center; margin:10px 0;">
+                        <div style="font-size:24px; margin-bottom:8px;">⏳</div>
+                        <div style="color:#24a1ee; font-size:13px; font-weight:bold; line-height:1.5;">Your courses are loading. Please wait.</div>
+                        <div style="color:#aaa; font-size:11px; margin-top:4px;">It may take 30 seconds.</div>
+                    </div>
+                `;
+                favContainer.innerHTML = '<p style="color:#777; font-size:12px;">Loading favourites...</p>';
+                return;
+            }
+
+            if (currentUser && currentUser !== '1111') {
+                const waLink = appSettings.whatsappChannelLink || 'https://whatsapp.com/';
+                setTimeout(() => showWhatsAppPopup(waLink), 500);
+            }
+
+            if (keys.length === 0) {
+                container.innerHTML = '<p style="color:#777; font-size:12px;">No courses available.</p>';
+                favContainer.innerHTML = '<p style="color:#777; font-size:12px;">No favourite courses.</p>';
+                return;
+            }
+
+            keys.sort((a, b) => {
+                const pinA = coursesData[a].pinned ? 1 : 0;
+                const pinB = coursesData[b].pinned ? 1 : 0;
+                if (pinA !== pinB) return pinB - pinA;
+                return 0;
+            });
+
+            let favCount = 0;
+            keys.forEach(key => {
+                const course = coursesData[key];
+                if (filterQuery && !course.name.toLowerCase().includes(filterQuery.toLowerCase())) return;
+
+                const isFav = favourites.includes(key);
+                const favHeart = isFav ? '❤️' : '🤍';
+                const pinBadge = course.pinned ? '<span style="color:#ffcc00; font-size:11px; margin-left:6px;">📌 Pinned</span>' : '';
+
+                const cardHtml = `
+                    <div class="course-grid-card">
+                        <button class="fav-btn" onclick="toggleFavourite('${key}', event)">${favHeart}</button>
+                        <div class="course-thumb-container" onclick="openCourseSubjects('${key}')">
+                            <img src="${course.heroImg}" class="course-grid-img" alt="${course.name}">
+                        </div>
+                        <div class="course-grid-info" onclick="openCourseSubjects('${key}')">
+                            <div class="course-grid-title">${course.name} ${pinBadge}</div>
+                            <div class="course-grid-desc">${course.desc}</div>
+                        </div>
+                    </div>
+                `;
+
+                if (isFav) {
+                    favCount++;
+                    favContainer.innerHTML += cardHtml;
+                }
+                container.innerHTML += cardHtml;
+            });
+
+            if (favCount === 0) {
+                favContainer.innerHTML = '<p style="color:#777; font-size:12px;">Click the heart (🤍) on any course to add to favourites.</p>';
+            }
+        }
+
+        function filterCourses(query) {
+            renderUserCourses(query);
+        }
+
+        function openCourseSubjects(courseKey) {
+            closeModal();
+            activeCourseKey = courseKey;
+            activeSubjectName = null;
+            activeChapterName = null;
+            const course = coursesData[courseKey];
+            document.getElementById('navCourseTitleHeader').innerText = course.name;
+            const container = document.getElementById('subjectsContainer');
+            container.innerHTML = '';
+
+            const subjects = course.subjects || {};
+            const subNames = Object.keys(subjects);
+
+            if(subNames.length === 0) {
+                container.innerHTML = '<p style="color:#777; font-size:12px;">No subjects added in this course yet.</p>';
+            } else {
+                subNames.forEach(sub => {
+                    container.innerHTML += `
+                        <div class="folder-card" onclick="openUserChapters('${sub.replace(/'/g, "\\'")}')">
+                            <span>📚 <b>${sub}</b></span>
+                            <span style="color:#aaa;">Chapters ›</span>
+                        </div>
+                    `;
+                });
+            }
+            switchScreen('subjectScreen');
+        }
+
+        function goBackToHome() {
+            closeModal();
+            switchScreen('homeScreen');
+        }
+
+        function openSubjectList() {
+            closeModal();
+            switchScreen('subjectScreen');
+        }
+
+        function openUserChapters(subName) {
+            closeModal();
+            activeSubjectName = subName;
+            activeChapterName = null;
+            document.getElementById('navChapterTitleHeader').innerText = subName;
+            renderChaptersListUI();
+            switchScreen('chapterScreen');
+        }
+
+        function goBackToChapters() {
+            closeModal();
+            activeChapterName = null;
+            renderChaptersListUI();
+            switchScreen('chapterScreen');
+        }
+
+        function renderChaptersListUI() {
+            const container = document.getElementById('chaptersContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const subData = (coursesData[activeCourseKey] && coursesData[activeCourseKey].subjects) ? (coursesData[activeCourseKey].subjects[activeSubjectName] || {}) : {};
+            const chapters = subData.chapters || {};
+            const chapterNames = Object.keys(chapters);
+            const legacyLectures = subData.lectures || [];
+
+            if (chapterNames.length === 0 && legacyLectures.length === 0) {
+                container.innerHTML = '<p style="color:#777; font-size:12px;">No chapters added in this subject yet.</p>';
+                return;
+            }
+
+            chapterNames.forEach(chapter => {
+                const count = (chapters[chapter] && chapters[chapter].lectures) ? chapters[chapter].lectures.length : 0;
+                container.innerHTML += `
+                    <div class="folder-card" onclick="openUserLectures('${chapter.replace(/'/g, "\\'")}')">
+                        <span>📂 <b>${chapter}</b></span>
+                        <span style="color:#aaa;">${count} Lecture${count === 1 ? '' : 's'} ›</span>
+                    </div>
+                `;
+            });
+
+            if (legacyLectures.length > 0) {
+                container.innerHTML += `
+                    <div class="folder-card" onclick="openUserLectures(null)">
+                        <span>📁 <b>Uncategorized / Existing Lectures</b></span>
+                        <span style="color:#aaa;">${legacyLectures.length} Lecture${legacyLectures.length === 1 ? '' : 's'} ›</span>
+                    </div>
+                `;
+            }
+        }
+
+        function openUserLectures(chapterName) {
+            closeModal();
+            activeChapterName = chapterName;
+            const header = chapterName ? chapterName : 'Existing Lectures';
+            document.getElementById('navSubjectTitleHeader').innerText = header;
+            document.getElementById('lectureSearchInput').value = '';
+            renderLecturesListUI();
+            switchScreen('lectureScreen');
+        }
+
+        function filterLectures(query) {
+            renderLecturesListUI(query);
+        }
+
+        function renderLecturesListUI(searchQuery = '') {
+            const lecContainer = document.getElementById('lecturesContainer');
+            lecContainer.innerHTML = '';
+
+            const subData = (coursesData[activeCourseKey] && coursesData[activeCourseKey].subjects) ? (coursesData[activeCourseKey].subjects[activeSubjectName] || {}) : {};
+            let lectures = [];
+
+            if (activeChapterName !== null) {
+                lectures = ((subData.chapters || {})[activeChapterName] || {}).lectures || [];
+            } else {
+                lectures = subData.lectures || [];
+            }
+
+            lectures = lectures.map((lec, idx) => ({ lec, originalIdx: idx }));
+            lectures.sort((a, b) => {
+                const numA = parseFloat(a.lec.title) || 0;
+                const numB = parseFloat(b.lec.title) || 0;
+                if (numA !== numB) return numB - numA;
+                return (b.lec.title || '').localeCompare(a.lec.title || '');
+            });
+
+            let filteredLectures = lectures;
+            if (searchQuery.trim() !== '') {
+                filteredLectures = lectures.filter(item => (item.lec.title || '').toLowerCase().includes(searchQuery.toLowerCase()));
+            }
+
+            if(filteredLectures.length === 0) {
+                lecContainer.innerHTML = '<p style="color:#777; font-size:12px;">No lectures found.</p>';
+            } else {
+                filteredLectures.forEach((item) => {
+                    const lec = item.lec;
+                    const originalIdx = item.originalIdx;
+                    
+                    let notesHtml = '';
+                    if (lec.notesUrl) {
+                        const notesLinks = lec.notesUrl.split(',').map(l => l.trim()).filter(l => l);
+                        notesLinks.forEach((link, nIdx) => {
+                            const label = `📁 Notes ${notesLinks.length > 1 ? (nIdx + 1) : ''}`;
+                            notesHtml += `<a class="action-chip" href="#" onclick="openPdfViewer('${lec.title.replace(/'/g, "\\'")}', '${link.replace(/'/g, "\\'")}'); return false;">${label}</a>`;
+                        });
+                    }
+
+                    let quizHtmlBtns = '';
+                    if (lec.quizUrl) {
+                        const quizLinks = lec.quizUrl.split(',').map(l => l.trim()).filter(l => l);
+                        if (quizLinks.length > 1) {
+                            const enLink = encodeURIComponent(quizLinks[0]);
+                            const hiLink = encodeURIComponent(quizLinks[1]);
+                            quizHtmlBtns += `<a class="action-chip" href="#" onclick="showLanguageSelectionModal('${enLink}', '${hiLink}'); return false;">📝 Quiz</a>`;
+                        } else if (quizLinks.length === 1) {
+                            quizHtmlBtns += `<a class="action-chip" href="#" onclick="openInAppQuizViewer('${quizLinks[0]}'); return false;">📝 Quiz</a>`;
+                        }
+                    }
+
+                    lecContainer.innerHTML += `
+                        <div class="yt-list-item" onclick="openVideoModal(${originalIdx})">
+                            <div class="yt-list-thumb">
+                                <img src="${lec.thumb || coursesData[activeCourseKey].heroImg}" style="width:100%; height:100%; object-fit:cover;" alt="thumb">
+                                <div class="yt-list-duration">${lec.duration || '45:00'}</div>
+                            </div>
+                            <div class="yt-list-info">
+                                <div class="yt-list-title">${lec.title}</div>
+                                <div class="yt-list-actions" onclick="event.stopPropagation();">
+                                    <a class="action-chip" href="#" onclick="openVideoModal(${originalIdx}); return false;">▶️ Watch Video</a>
+                                    ${notesHtml}
+                                    ${quizHtmlBtns}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function showLanguageSelectionModal(enLink, hiLink) {
+            const btnContainer = document.getElementById('langButtonsContainer');
+            btnContainer.innerHTML = `
+                <button class="lang-btn lang-btn-en" onclick="selectQuizLanguage('${enLink}')">🇬🇧 English Quiz</button>
+                <button class="lang-btn lang-btn-hi" onclick="selectQuizLanguage('${hiLink}')">🇮🇳 Hindi Quiz</button>
+            `;
+            document.getElementById('languageModal').classList.add('active');
+        }
+
+        function closeLanguageModal() {
+            document.getElementById('languageModal').classList.remove('active');
+        }
+
+        function selectQuizLanguage(url) {
+            closeLanguageModal();
+            openInAppQuizViewer(decodeURIComponent(url));
+        }
+
+        // ================= PDF & GOOGLE DRIVE VIEWER HELPER =================
+        function formatPdfViewerUrl(rawUrl) {
+            let url = (rawUrl || '').trim();
+            if (!url) return '';
+
+            if (url.includes('drive.google.com')) {
+                let fileId = null;
+                const matchD = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+                if (matchD && matchD[1]) {
+                    fileId = matchD[1];
+                } else {
+                    const matchId = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+                    if (matchId && matchId[1]) {
+                        fileId = matchId[1];
+                    }
+                }
+                if (fileId) {
+                    return `https://drive.google.com/file/d/${fileId}/preview`;
+                }
+            }
+
+            if (url.includes('docs.google.com')) {
+                if (url.includes('/edit') || url.includes('/view')) {
+                    return url.replace(/\/(edit|view)(\?.*)?$/, '/preview');
+                }
+                return url;
+            }
+
+            return `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}`;
+        }
+
+        function openPdfViewer(title, url) {
+            closeModal();
+            const container = document.getElementById('modalBodyContent');
+            document.getElementById('playerSettingsContainer').style.display = 'none';
+            
+            const viewerUrl = formatPdfViewerUrl(url);
+            container.innerHTML = `<iframe src="${viewerUrl}" style="width:100%; height:100%; border:none; background:#fff;" allow="autoplay"></iframe>`;
+            
+            history.pushState({ modalOpen: true }, "");
+            document.getElementById('universalModal').classList.add('active');
+
+            const exists = downloadedNotes.some(item => item.url === url);
+            if (!exists) {
+                downloadedNotes.push({ title: title, url: url, date: new Date().toLocaleDateString() });
+                localStorage.setItem('dora_downloads', JSON.stringify(downloadedNotes));
+            }
+        }
+
+        function openInAppQuizViewer(url) {
+            closeModal();
+            const container = document.getElementById('modalBodyContent');
+            document.getElementById('playerSettingsContainer').style.display = 'none';
+            container.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none; background:#fff;"></iframe>`;
+            
+            history.pushState({ modalOpen: true }, "");
+            document.getElementById('universalModal').classList.add('active');
+        }
+
+        function openDownloadsScreen() {
+            closeModal();
+            renderDownloadsList();
+            switchScreen('downloadsScreen');
+        }
+
+        function renderDownloadsList() {
+            const container = document.getElementById('downloadedNotesList');
+            container.innerHTML = '';
+
+            if (downloadedNotes.length === 0) {
+                container.innerHTML = '<p style="color:#777; font-size:12px;">No saved notes found. Open any lecture notes to view and save them here.</p>';
+                return;
+            }
+
+            downloadedNotes.forEach((item, idx) => {
+                container.innerHTML += `
+                    <div class="download-item-card">
+                        <div style="flex:1; cursor:pointer;" onclick="openPdfViewer('${item.title.replace(/'/g, "\\'")}', '${item.url.replace(/'/g, "\\'")}')">
+                            <div style="font-weight:bold; font-size:12px; color:#fff;">📄 ${item.title}</div>
+                            <div style="font-size:10px; color:#aaa;">Saved on: ${item.date || 'Recent'}</div>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="openPdfViewer('${item.title.replace(/'/g, "\\'")}', '${item.url.replace(/'/g, "\\'")}')" style="background:#24a1ee; color:#fff; border:none; padding:5px 8px; border-radius:4px; font-size:10px; cursor:pointer;">View</button>
+                            <button onclick="deleteDownloadItem(${idx})" style="background:#8b0000; color:#fff; border:none; padding:5px 8px; border-radius:4px; font-size:10px; cursor:pointer;">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function deleteDownloadItem(idx) {
+            if (confirm("Delete this note from storage?")) {
+                downloadedNotes.splice(idx, 1);
+                localStorage.setItem('dora_downloads', JSON.stringify(downloadedNotes));
+                renderDownloadsList();
+            }
+        }
+
+        function clearAllDownloads() {
+            if (confirm("Clear all downloaded notes?")) {
+                downloadedNotes = [];
+                localStorage.removeItem('dora_downloads');
+                renderDownloadsList();
+            }
+        }
+
+        // ================= SMART URL SANITIZER =================
+        function sanitizeVideoUrl(rawUrl) {
+            let url = (rawUrl || '').trim();
+            if (!url) return '';
+
+            if (url.includes('url=')) {
+                try {
+                    const parsed = new URL(url);
+                    const ext = parsed.searchParams.get('url');
+                    if (ext) url = decodeURIComponent(ext);
+                } catch(e) {
+                    const m = url.match(/[?&]url=([^&]+)/);
+                    if (m && m[1]) url = decodeURIComponent(m[1]);
+                }
+            }
+            if (url.includes('archive.org/details/')) {
+                url = url.replace('/details/', '/embed/');
+            }
+            return url;
+        }
+
+        // ================= YOUTUBE + UNIVERSAL STREAM PLAYER =================
+        function getYouTubeVideoId(rawUrl) {
+            const url = (rawUrl || '').trim();
+            if (!url) return null;
+            try {
+                const u = new URL(url);
+                const host = u.hostname.toLowerCase().replace(/^www\./, '');
+                if (host === 'youtu.be') return u.pathname.split('/').filter(Boolean)[0] || null;
+                if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+                    const v = u.searchParams.get('v');
+                    if (v) return v;
+                    const parts = u.pathname.split('/').filter(Boolean);
+                    if (['embed','shorts','live'].includes(parts[0])) return parts[1] || null;
+                }
+            } catch(e) {}
+            const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([A-Za-z0-9_-]{6,})/i);
+            return m ? m[1] : null;
+        }
+
+        function isYouTubeUrl(url) {
+            return !!getYouTubeVideoId(url);
+        }
+
+        function loadYouTubeVideo(url) {
+            const videoId = getYouTubeVideoId(url);
+            const container = document.getElementById('modalBodyContent');
+            if (!videoId) {
+                alert('Invalid YouTube video link.');
+                return;
+            }
+            if (currentHlsInstance) {
+                currentHlsInstance.destroy();
+                currentHlsInstance = null;
+            }
+            activeVideoTag = null;
+            container.innerHTML = '';
+            const iframe = document.createElement('iframe');
+            iframe.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(videoId) + '?autoplay=1&rel=0&modestbranding=1&playsinline=1';
+            iframe.allowFullscreen = true;
+            iframe.setAttribute('allow', 'autoplay; encrypted-media; fullscreen; picture-in-picture');
+            iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            iframe.style.background = '#000';
+            container.appendChild(iframe);
+        }
+
+        // ================= UNIVERSAL STREAM & MULTI-QUALITY PLAYER =================
+        function openVideoModal(lecIdx) {
+            closeModal();
+            const subData = (coursesData[activeCourseKey] && coursesData[activeCourseKey].subjects) ? (coursesData[activeCourseKey].subjects[activeSubjectName] || {}) : {};
+            const lectureList = activeChapterName !== null
+                ? (((subData.chapters || {})[activeChapterName] || {}).lectures || [])
+                : (subData.lectures || []);
+            const lec = lectureList[lecIdx];
+            if (!lec) {
+                alert('Lecture not found. Please refresh the page and try again.');
+                return;
+            }
+            const settingsContainer = document.getElementById('playerSettingsContainer');
+
+            const liveStream = sanitizeVideoUrl(lec.liveStreamUrl || '');
+
+            currentLectureVideos = {};
+            if (lec.videoUrls) {
+                if (lec.videoUrls['240p']) currentLectureVideos['240p'] = sanitizeVideoUrl(lec.videoUrls['240p']);
+                if (lec.videoUrls['360p']) currentLectureVideos['360p'] = sanitizeVideoUrl(lec.videoUrls['360p']);
+                if (lec.videoUrls['480p']) currentLectureVideos['480p'] = sanitizeVideoUrl(lec.videoUrls['480p']);
+                if (lec.videoUrls['720p']) currentLectureVideos['720p'] = sanitizeVideoUrl(lec.videoUrls['720p']);
+            } else if (lec.videoUrl) {
+                currentLectureVideos['Default'] = sanitizeVideoUrl(lec.videoUrl);
+            }
+
+            if (liveStream && isYouTubeUrl(liveStream)) {
+                settingsContainer.style.display = 'none';
+                loadYouTubeVideo(liveStream);
+            } else if (liveStream && liveStream.toLowerCase().includes('.m3u8')) {
+                settingsContainer.style.display = 'none';
+                loadHlsStream(liveStream);
+            } else if (liveStream) {
+                settingsContainer.style.display = 'none';
+                loadVideoSource(liveStream, 0);
+            } else {
+                const qualities = Object.keys(currentLectureVideos);
+                if (qualities.length === 0) {
+                    alert('No valid video or stream link found for this lecture!');
+                    return;
+                }
+
+                const qualityOrder = ['720p', '480p', '360p', '240p', 'Default'];
+                let activeQuality = qualities[0];
+                for (let q of qualityOrder) {
+                    if (currentLectureVideos[q]) {
+                        activeQuality = q;
+                        break;
+                    }
+                }
+
+                currentSelectedQuality = activeQuality;
+                renderQualityMenuOptions();
+
+                if (qualities.length > 1) {
+                    settingsContainer.style.display = 'block';
+                } else {
+                    settingsContainer.style.display = 'none';
+                }
+
+                const videoToPlay = currentLectureVideos[activeQuality];
+                if (isYouTubeUrl(videoToPlay)) {
+                    settingsContainer.style.display = 'none';
+                    loadYouTubeVideo(videoToPlay);
+                } else if (videoToPlay.toLowerCase().includes('.m3u8')) {
+                    settingsContainer.style.display = 'none';
+                    loadHlsStream(videoToPlay);
+                } else {
+                    loadVideoSource(videoToPlay, 0);
+                }
+            }
+
+            history.pushState({ modalOpen: true }, '');
+            document.getElementById('universalModal').classList.add('active');
+        }
+
+        function loadHlsStream(url) {
+            const container = document.getElementById('modalBodyContent');
+            container.innerHTML = '';
+
+            const video = document.createElement('video');
+            video.controls = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            video.setAttribute('playsinline', '');
+            video.setAttribute('webkit-playsinline', 'true');
+            video.setAttribute('controlsList', 'nodownload');
+            video.oncontextmenu = function(e) { e.preventDefault(); return false; };
+
+            container.appendChild(video);
+            activeVideoTag = video;
+
+            if (Hls.isSupported()) {
+                currentHlsInstance = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true
+                });
+                currentHlsInstance.loadSource(url);
+                currentHlsInstance.attachMedia(video);
+                currentHlsInstance.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play().catch(() => console.log("User action needed for play"));
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = url;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play();
+                });
+            }
+        }
+
+        function toggleQualityMenu(event) {
+            if(event) event.stopPropagation();
+            const popup = document.getElementById('qualityMenuPopup');
+            popup.classList.toggle('open');
+        }
+
+        function renderQualityMenuOptions() {
+            const popup = document.getElementById('qualityMenuPopup');
+            popup.innerHTML = '<div style="font-size:10px; color:#aaa; padding:4px 8px; font-weight:bold; border-bottom:1px solid #333; margin-bottom:4px;">QUALITY</div>';
+            
+            const qualityOrder = ['720p', '480p', '360p', '240p', 'Default'];
+            qualityOrder.forEach(q => {
+                if (currentLectureVideos[q]) {
+                    const isCurrent = (q === currentSelectedQuality);
+                    const btn = document.createElement('button');
+                    btn.className = `quality-item-btn ${isCurrent ? 'active' : ''}`;
+                    btn.innerHTML = `<span>${q}</span> ${isCurrent ? '<span>✓</span>' : ''}`;
+                    btn.onclick = function(e) {
+                        e.stopPropagation();
+                        popup.classList.remove('open');
+                        changeActiveVideoQuality(q);
+                    };
+                    popup.appendChild(btn);
+                }
+            });
+        }
+
+        // ================= DIRECT VIDEO / STREAM BOT RENDERER =================
+        function loadVideoSource(url, seekTime = 0) {
+            if (isYouTubeUrl(url)) {
+                loadYouTubeVideo(url);
+                return;
+            }
+
+            const container = document.getElementById('modalBodyContent');
+            container.innerHTML = '';
+
+            const video = document.createElement('video');
+            video.controls = true;
+            video.autoplay = true;
+            video.playsInline = true;
+            video.setAttribute('playsinline', '');
+            video.setAttribute('webkit-playsinline', 'true');
+            video.setAttribute('preload', 'auto');
+            video.setAttribute('controlsList', 'nodownload');
+            video.oncontextmenu = function(e) { e.preventDefault(); return false; };
+
+            let hasTriedAlt = false;
+
+            video.addEventListener('loadedmetadata', function() {
+                if (seekTime > 0) {
+                    video.currentTime = seekTime;
+                }
+                video.play().catch(e => console.log('Autoplay deferred:', e));
+            });
+
+            video.onerror = function() {
+                if (!hasTriedAlt) {
+                    hasTriedAlt = true;
+                    let altUrl = url;
+                    if (url.includes('/stream/')) {
+                        altUrl = url.replace('/stream/', '/dl/');
+                    } else if (url.includes('/dl/')) {
+                        altUrl = url.replace('/dl/', '/stream/');
+                    }
+                    if (altUrl !== url) {
+                        console.warn("Retrying with alternate stream path:", altUrl);
+                        video.src = altUrl;
+                        video.load();
+                        return;
+                    }
+                }
+                console.warn("Direct stream load failed. Fallback to stream player frame.");
+                container.innerHTML = `<iframe src="${url}" style="width:100%; height:100%; border:none; background:#000;" allow="autoplay; fullscreen"></iframe>`;
+            };
+
+            const source = document.createElement('source');
+            source.src = url;
+            source.type = 'video/mp4';
+            video.appendChild(source);
+            video.src = url;
+
+            activeVideoTag = video;
+            container.appendChild(video);
+            video.load();
+        }
+
+        function changeActiveVideoQuality(qualityKey) {
+            const nextUrl = currentLectureVideos[qualityKey];
+            if (!nextUrl || qualityKey === currentSelectedQuality) return;
+
+            currentSelectedQuality = qualityKey;
+            renderQualityMenuOptions();
+
+            let currentTime = 0;
+            if (activeVideoTag && !isNaN(activeVideoTag.currentTime)) {
+                currentTime = activeVideoTag.currentTime;
+            }
+
+            loadVideoSource(nextUrl, currentTime);
+        }
+
+        // ================= BULLETPROOF CLOSE & AUDIO-KILL FUNCTION =================
+        function closeModal() {
+            if (currentHlsInstance) {
+                try {
+                    currentHlsInstance.stopLoad();
+                    currentHlsInstance.destroy();
+                } catch(e) {}
+                currentHlsInstance = null;
+            }
+
+            if (activeVideoTag) {
+                try {
+                    activeVideoTag.pause();
+                    activeVideoTag.removeAttribute('src');
+                    activeVideoTag.load();
+                } catch(e) {}
+                activeVideoTag = null;
+            }
+
+            const modalBody = document.getElementById('modalBodyContent');
+            if (modalBody) {
+                // Iframes (YouTube / Video Web Viewers) ko blank karke background audio kill karein
+                const iframes = modalBody.getElementsByTagName('iframe');
+                for (let i = 0; i < iframes.length; i++) {
+                    try {
+                        iframes[i].src = 'about:blank';
+                    } catch(e) {}
+                }
+                const videos = modalBody.getElementsByTagName('video');
+                for (let v = 0; v < videos.length; v++) {
+                    try {
+                        videos[v].pause();
+                        videos[v].src = '';
+                        videos[v].load();
+                    } catch(e) {}
+                }
+                modalBody.innerHTML = '';
+            }
+
+            const settings = document.getElementById('playerSettingsContainer');
+            if (settings) settings.style.display = 'none';
+
+            const popup = document.getElementById('qualityMenuPopup');
+            if(popup) popup.classList.remove('open');
+
+            const modal = document.getElementById('universalModal');
+            if (modal) modal.classList.remove('active');
+        }
+
+        // ================= ADMIN PANEL FUNCTIONS =================
+
+        function renderAdminCoursesList() {
+            const container = document.getElementById('adminCoursesList');
+            if(!container) return;
+            container.innerHTML = '';
+            const keys = Object.keys(coursesData || {});
+
+            if(keys.length === 0) {
+                container.innerHTML = '<p style="color:#777; font-size:12px;">No courses found.</p>';
+                return;
+            }
+
+            keys.forEach(key => {
+                const course = coursesData[key];
+                const isPinned = course.pinned ? true : false;
+                const pinBtnText = isPinned ? 'Unpin ❌' : 'Pin to Top 📌';
+                const pinBtnColor = isPinned ? '#b8860b' : '#0088cc';
+
+                container.innerHTML += `
+                    <div class="admin-row">
+                        <span onclick="openAdminSubjects('${key}')" style="cursor:pointer; flex:1;"><b>${course.name}</b> ${isPinned ? '⭐' : ''}</span>
+                        <div style="display:flex; gap:6px;">
+                            <button class="icon-btn" style="background:${pinBtnColor};" onclick="togglePinCourse('${key}', ${!isPinned})">${pinBtnText}</button>
+                            <button class="icon-btn" onclick="openAdminSubjects('${key}')">Manage</button>
+                            <button class="icon-btn" style="background:#8b0000;" onclick="deleteCourse('${key}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function togglePinCourse(key, status) {
+            rtdb.ref(`courses/${key}/pinned`).set(status, (err) => {
+                if(!err) {
+                    markDataAsUpdated();
+                    alert(status ? 'Course pinned to top successfully!' : 'Course unpinned!');
+                }
+            });
+        }
+
+        function openAddCoursePage() { 
+            document.getElementById('newCourseName').value = '';
+            document.getElementById('newCourseDesc').value = '';
+            document.getElementById('newCourseImgFile').value = '';
+            document.getElementById('addCoursePage').classList.add('active'); 
+        }
+        
+        function closeAddCoursePage() { 
+            document.getElementById('addCoursePage').classList.remove('active'); 
+        }
+
+        function compressImage(file, callback) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function (e) {
+                const img = new Image();
+                img.src = e.target.result;
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    const MAX_W = 800; const MAX_H = 450;
+                    let w = img.width; let h = img.height;
+                    if (w > h) { if (w > MAX_W) { h *= MAX_W / w; w = MAX_W; } }
+                    else { if (h > MAX_H) { w *= MAX_H / h; h = MAX_H; } }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    callback(canvas.toDataURL('image/jpeg', 0.7));
+                };
+            };
+        }
+
+        function addNewCourse() {
+            const name = document.getElementById('newCourseName').value.trim();
+            const desc = document.getElementById('newCourseDesc').value.trim();
+            const fileInput = document.getElementById('newCourseImgFile');
+            if(!name) { alert('Course name required'); return; }
+
+            function finalize(imgUrl) {
+                const ref = rtdb.ref('courses').push();
+                ref.set({
+                    name, desc: desc || 'Course description', heroImg: imgUrl,
+                    pinned: false,
+                    subjects: {}
+                }, (err) => {
+                    if(!err) { 
+                        markDataAsUpdated();
+                        closeAddCoursePage(); 
+                        alert('Course saved successfully!'); 
+                    } else {
+                        alert('Error saving course: ' + err.message);
+                    }
+                });
+            }
+
+            if(fileInput.files && fileInput.files[0]) {
+                compressImage(fileInput.files[0], finalize);
+            } else {
+                finalize("https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?auto=format&fit=crop&q=80&w=800");
+            }
+        }
+
+        function deleteCourse(key) { 
+            if(confirm("Delete this course?")) {
+                rtdb.ref('courses/' + key).remove(() => {
+                    markDataAsUpdated();
+                }); 
+            }
+        }
+        
+        function deleteCurrentCourse() { 
+            if(activeCourseKey) { 
+                deleteCourse(activeCourseKey); 
+                closeAdminSubjects(); 
+            } 
+        }
+
+        function openAdminSubjects(courseKey) {
+            if(!courseKey) return;
+            activeCourseKey = courseKey;
+            activeSubjectName = null;
+            activeChapterName = null;
+            const course = coursesData[courseKey];
+            if(course) {
+                document.getElementById('adminCourseTitle').innerText = course.name;
+                renderAdminSubjectsList();
+                document.getElementById('adminSubjectsPage').classList.add('active');
+            }
+        }
+        
+        function closeAdminSubjects() { 
+            document.getElementById('adminSubjectsPage').classList.remove('active');
+        }
+
+        function renderAdminSubjectsList() {
+            const container = document.getElementById('adminSubjectsList');
+            if(!container) return;
+            container.innerHTML = '';
+            if(!activeCourseKey || !coursesData[activeCourseKey]) return;
+            
+            const subs = coursesData[activeCourseKey].subjects || {};
+            const subKeys = Object.keys(subs);
+
+            if(subKeys.length === 0) {
+                container.innerHTML = '<p style="color:#777; font-size:12px;">No subjects added yet.</p>';
+                return;
+            }
+
+            subKeys.forEach(sub => {
+                container.innerHTML += `
+                    <div class="admin-row">
+                        <span style="font-weight:bold;">${sub}</span>
+                        <div style="display:flex; gap:6px;">
+                            <button class="icon-btn" onclick="openAdminChapters('${sub.replace(/'/g, "\\'")}')">Manage Chapters</button>
+                            <button class="icon-btn" style="background:#8b0000;" onclick="deleteSubject('${sub.replace(/'/g, "\\'")}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function addNewSubject() {
+            const subName = document.getElementById('newSubjectName').value.trim();
+            if(!subName) { alert('Subject name required'); return; }
+            
+            rtdb.ref(`courses/${activeCourseKey}/subjects/${subName}`).set({ 
+                createdAt: new Date().toISOString(),
+                chapters: {}
+            }, (err) => {
+                if(!err) { 
+                    markDataAsUpdated();
+                    document.getElementById('newSubjectName').value = ''; 
+                    alert('Subject added successfully!');
+                    renderAdminSubjectsList();
+                } else {
+                    alert('Error: ' + err.message);
+                }
+            });
+        }
+
+        function deleteSubject(subName) {
+            if(confirm(`Delete subject ${subName}?`)) {
+                rtdb.ref(`courses/${activeCourseKey}/subjects/${subName}`).remove(() => {
+                    markDataAsUpdated();
+                    activeSubjectName = null;
+                    activeChapterName = null;
+                    renderAdminSubjectsList();
+                });
+            }
+        }
+
+        function openAdminChapters(subName) {
+            activeSubjectName = subName;
+            activeChapterName = null;
+            document.getElementById('adminSubjectTitleHeader').innerText = subName + ' — Chapters';
+            renderAdminChaptersList();
+            document.getElementById('adminChaptersPage').classList.add('active');
+        }
+
+        function closeAdminChapters() {
+            document.getElementById('adminChaptersPage').classList.remove('active');
+        }
+
+        function renderAdminChaptersList() {
+            const container = document.getElementById('adminChaptersList');
+            if(!container) return;
+            container.innerHTML = '';
+            if(!activeCourseKey || !activeSubjectName || !coursesData[activeCourseKey] || !coursesData[activeCourseKey].subjects[activeSubjectName]) return;
+
+            const subData = coursesData[activeCourseKey].subjects[activeSubjectName] || {};
+            const chapters = subData.chapters || {};
+            const chapterKeys = Object.keys(chapters);
+            const legacyCount = (subData.lectures || []).length;
+
+            if(chapterKeys.length === 0 && legacyCount === 0) {
+                container.innerHTML = '<p style="color:#777; font-size:12px;">No chapters added yet.</p>';
+                return;
+            }
+
+            chapterKeys.forEach(chapter => {
+                const count = (chapters[chapter] && chapters[chapter].lectures) ? chapters[chapter].lectures.length : 0;
+                container.innerHTML += `
+                    <div class="admin-row">
+                        <span style="font-weight:bold; flex:1;">📂 ${chapter}<small style="display:block;color:#777;margin-top:3px;">${count} lecture${count === 1 ? '' : 's'}</small></span>
+                        <div style="display:flex; gap:6px;">
+                            <button class="icon-btn" onclick="openAdminLectures('${chapter.replace(/'/g, "\\'")}')">Manage Lectures</button>
+                            <button class="icon-btn" style="background:#8b0000;" onclick="deleteChapter('${chapter.replace(/'/g, "\\'")}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (legacyCount > 0) {
+                container.innerHTML += `
+                    <div class="admin-row">
+                        <span style="font-weight:bold; flex:1;">📁 Uncategorized / Existing Lectures<small style="display:block;color:#777;margin-top:3px;">${legacyCount} lecture${legacyCount === 1 ? '' : 's'}</small></span>
+                        <button class="icon-btn" onclick="openAdminLectures(null)">Manage Lectures</button>
+                    </div>
+                `;
+            }
+        }
+
+        function addNewChapter() {
+            const input = document.getElementById('newChapterName');
+            const chapterName = input.value.trim();
+            if(!chapterName) { alert('Chapter name required'); return; }
+            if(/[.#$\/\[\]]/.test(chapterName)) {
+                alert('Chapter name cannot contain . # $ / [ or ]');
+                return;
+            }
+
+            const chapterRef = rtdb.ref(`courses/${activeCourseKey}/subjects/${activeSubjectName}/chapters/${chapterName}`);
+            chapterRef.once('value').then(snapshot => {
+                if(snapshot.exists()) {
+                    alert('This chapter already exists!');
+                    return;
+                }
+                chapterRef.set({
+                    createdAt: new Date().toISOString(),
+                    lectures: []
+                }, (err) => {
+                    if(!err) {
+                        markDataAsUpdated();
+                        input.value = '';
+                        renderAdminChaptersList();
+                        alert('Chapter added successfully!');
+                    } else {
+                        alert('Error: ' + err.message);
+                    }
+                });
+            }).catch(err => alert('Error: ' + err.message));
+        }
+
+        function deleteChapter(chapterName) {
+            if(confirm(`Delete chapter ${chapterName} and all its lectures?`)) {
+                rtdb.ref(`courses/${activeCourseKey}/subjects/${activeSubjectName}/chapters/${chapterName}`).remove((err) => {
+                    if(!err) {
+                        markDataAsUpdated();
+                        activeChapterName = null;
+                        renderAdminChaptersList();
+                    } else {
+                        alert('Error: ' + err.message);
+                    }
+                });
+            }
+        }
+
+        function openAdminLectures(chapterName) {
+            activeChapterName = chapterName;
+            const header = chapterName ? `${activeSubjectName} / ${chapterName}` : `${activeSubjectName} / Existing Lectures`;
+            document.getElementById('adminLectureTitleHeader').innerText = header;
+            renderAdminLecturesList();
+            document.getElementById('adminLecturesPage').classList.add('active');
+        }
+
+        function renderAdminLecturesList() {
+            const container = document.getElementById('adminLecturesList');
+            if(!container) return;
+            container.innerHTML = '';
+            if(!activeCourseKey || !activeSubjectName) return;
+
+            const subData = coursesData[activeCourseKey].subjects[activeSubjectName] || {};
+            let lectures = [];
+            if (activeChapterName !== null) {
+                lectures = ((subData.chapters || {})[activeChapterName] || {}).lectures || [];
+            } else {
+                lectures = subData.lectures || [];
+            }
+
+            if(lectures.length === 0) {
+                container.innerHTML = '<p style="color:#777; font-size:12px;">No lectures added yet.</p>';
+                return;
+            }
+
+            lectures.forEach((lec, idx) => {
+                container.innerHTML += `
+                    <div class="admin-row" style="gap:8px;">
+                        <span style="flex:1; min-width:0;"><b>${lec.title}</b></span>
+                        <div style="display:flex; gap:6px; flex-shrink:0;">
+                            <button class="icon-btn" onclick="openEditLecturePage(${idx})">Edit</button>
+                            <button class="icon-btn" style="background:#333;" onclick="moveLectureToChapter(${idx})">Move</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function moveLectureToChapter(idx) {
+            if(!activeCourseKey || !activeSubjectName) return;
+
+            const subData = coursesData[activeCourseKey].subjects[activeSubjectName] || {};
+            const chapters = subData.chapters || {};
+            const chapterNames = Object.keys(chapters);
+
+            if(chapterNames.length === 0) {
+                alert('Pehle kam se kam 1 chapter bana lijiye.');
+                return;
+            }
+
+            let sourceLectures = [];
+            if(activeChapterName !== null) {
+                sourceLectures = ((chapters[activeChapterName] || {}).lectures || []);
+            } else {
+                sourceLectures = subData.lectures || [];
+            }
+
+            const lecture = sourceLectures[idx];
+            if(!lecture) return;
+
+            const available = chapterNames.filter(name => name !== activeChapterName);
+            if(available.length === 0) {
+                alert('Is lecture ko move karne ke liye koi doosra chapter nahi hai.');
+                return;
+            }
+
+            let message = 'Lecture: ' + (lecture.title || 'Untitled Lecture') + '\n\n';
+            message += 'Kis chapter mein move karna hai?\n\n';
+            available.forEach((name, i) => {
+                message += (i + 1) + '. ' + name + '\n';
+            });
+            message += '\nSirf chapter ka number type karein:';
+
+            const answer = prompt(message);
+            if(answer === null) return;
+
+            const choice = Number(answer.trim());
+            if(!Number.isInteger(choice) || choice < 1 || choice > available.length) {
+                alert('Invalid chapter number.');
+                return;
+            }
+
+            const targetChapter = available[choice - 1];
+            const targetLectures = [...(((chapters[targetChapter] || {}).lectures || []))];
+            const updatedSource = [...sourceLectures];
+            updatedSource.splice(idx, 1);
+            targetLectures.push(lecture);
+
+            const updates = {};
+            if(activeChapterName !== null) {
+                updates[`courses/${activeCourseKey}/subjects/${activeSubjectName}/chapters/${activeChapterName}/lectures`] = updatedSource;
+            } else {
+                updates[`courses/${activeCourseKey}/subjects/${activeSubjectName}/lectures`] = updatedSource;
+            }
+            updates[`courses/${activeCourseKey}/subjects/${activeSubjectName}/chapters/${targetChapter}/lectures`] = targetLectures;
+
+            rtdb.ref().update(updates, (err) => {
+                if(err) {
+                    alert('Move failed: ' + err.message);
+                    return;
+                }
+                markDataAsUpdated();
+                alert('Lecture moved to: ' + targetChapter);
+                renderAdminLecturesList();
+                renderAdminChaptersList();
+            });
+        }
+
+        function openAddLecturePage() {
+            document.getElementById('lectureFormHeading').innerText = "Add Lecture";
+            document.getElementById('editingLecIdx').value = "";
+            document.getElementById('lecFormTitle').value = "";
+            document.getElementById('lecFormDesc').value = "";
+            document.getElementById('lecFormDuration').value = "45:00";
+            document.getElementById('lecFormLiveStreamUrl').value = "";
+            document.getElementById('lecFormVideo240').value = "";
+            document.getElementById('lecFormVideo360').value = "";
+            document.getElementById('lecFormVideo480').value = "";
+            document.getElementById('lecFormVideo720').value = "";
+            document.getElementById('lecFormThumbUrl').value = "";
+            document.getElementById('lecFormNotesUrl').value = "";
+            document.getElementById('lecFormQuizUrl').value = "";
+            document.getElementById('deleteLecBtn').style.display = "none";
+            document.getElementById('editLecturePage').classList.add('active');
+        }
+
+        function openEditLecturePage(idx) {
+            const subData = coursesData[activeCourseKey].subjects[activeSubjectName] || {};
+            let lectures = [];
+            if (activeChapterName !== null) {
+                lectures = ((subData.chapters || {})[activeChapterName] || {}).lectures || [];
+            } else {
+                lectures = subData.lectures || [];
+            }
+            const lec = lectures[idx];
+            if (!lec) return;
+
+            document.getElementById('lectureFormHeading').innerText = "Edit Lecture";
+            document.getElementById('editingLecIdx').value = idx;
+            document.getElementById('lecFormTitle').value = lec.title || '';
+            document.getElementById('lecFormDesc').value = lec.desc || '';
+            document.getElementById('lecFormDuration').value = lec.duration || '45:00';
+            document.getElementById('lecFormLiveStreamUrl').value = lec.liveStreamUrl || '';
+
+            const vUrls = lec.videoUrls || {};
+            document.getElementById('lecFormVideo240').value = vUrls['240p'] || '';
+            document.getElementById('lecFormVideo360').value = vUrls['360p'] || '';
+            document.getElementById('lecFormVideo480').value = vUrls['480p'] || '';
+            document.getElementById('lecFormVideo720').value = vUrls['720p'] || (lec.videoUrl || '');
+
+            document.getElementById('lecFormThumbUrl').value = lec.thumb || '';
+            document.getElementById('lecFormNotesUrl').value = lec.notesUrl || '';
+            document.getElementById('lecFormQuizUrl').value = lec.quizUrl || '';
+            document.getElementById('deleteLecBtn').style.display = "block";
+            document.getElementById('editLecturePage').classList.add('active');
+        }
+
+        function closeEditLecturePage() {
+            document.getElementById('editLecturePage').classList.remove('active');
+        }
+
+        function saveLectureData() {
+            const idx = document.getElementById('editingLecIdx').value;
+            const title = document.getElementById('lecFormTitle').value.trim();
+            const desc = document.getElementById('lecFormDesc').value.trim();
+            const duration = document.getElementById('lecFormDuration').value.trim();
+            
+            const liveStream = document.getElementById('lecFormLiveStreamUrl').value.trim();
+            const v240 = document.getElementById('lecFormVideo240').value.trim();
+            const v360 = document.getElementById('lecFormVideo360').value.trim();
+            const v480 = document.getElementById('lecFormVideo480').value.trim();
+            const v720 = document.getElementById('lecFormVideo720').value.trim();
+
+            const thumbUrl = document.getElementById('lecFormThumbUrl').value.trim();
+            const notesUrl = document.getElementById('lecFormNotesUrl').value.trim();
+            const quizUrl = document.getElementById('lecFormQuizUrl').value.trim();
+
+            if(!title || (!liveStream && !v240 && !v360 && !v480 && !v720)) {
+                alert('Lecture title and at least one Video URL or Live Stream URL are required.');
+                return;
+            }
+
+            const videoUrls = {};
+            if (v240) videoUrls['240p'] = v240;
+            if (v360) videoUrls['360p'] = v360;
+            if (v480) videoUrls['480p'] = v480;
+            if (v720) videoUrls['720p'] = v720;
+
+            const primaryVideoUrl = liveStream || v720 || v480 || v360 || v240;
+
+            const subData = coursesData[activeCourseKey].subjects[activeSubjectName] || {};
+            let lectures = [];
+            if (activeChapterName !== null) {
+                lectures = (((subData.chapters || {})[activeChapterName] || {}).lectures || []);
+            } else {
+                lectures = subData.lectures || [];
+            }
+            lectures = [...lectures];
+
+            const lecObj = {
+                title, desc, duration,
+                liveStreamUrl: liveStream,
+                videoUrl: primaryVideoUrl,
+                videoUrls: videoUrls,
+                thumb: thumbUrl || coursesData[activeCourseKey].heroImg,
+                notesUrl, quizUrl
+            };
+
+            if(idx !== "") {
+                lectures[Number(idx)] = lecObj;
+            } else {
+                lectures.push(lecObj);
+            }
+
+            const path = activeChapterName !== null
+                ? `courses/${activeCourseKey}/subjects/${activeSubjectName}/chapters/${activeChapterName}/lectures`
+                : `courses/${activeCourseKey}/subjects/${activeSubjectName}/lectures`;
+
+            rtdb.ref(path).set(lectures, (err) => {
+                if(!err) {
+                    markDataAsUpdated();
+                    closeEditLecturePage();
+                    alert('Lecture saved successfully!');
+                    renderAdminLecturesList();
+                    renderAdminChaptersList();
+                } else {
+                    alert('Error: ' + err.message);
+                }
+            });
+        }
+
+        function deleteCurrentLecture() {
+            if(confirm("Delete this lecture?")) {
+                const idx = document.getElementById('editingLecIdx').value;
+                const subData = coursesData[activeCourseKey].subjects[activeSubjectName] || {};
+                let lectures = [];
+                if (activeChapterName !== null) {
+                    lectures = (((subData.chapters || {})[activeChapterName] || {}).lectures || []);
+                } else {
+                    lectures = subData.lectures || [];
+                }
+                lectures = [...lectures];
+                lectures.splice(Number(idx), 1);
+
+                const path = activeChapterName !== null
+                    ? `courses/${activeCourseKey}/subjects/${activeSubjectName}/chapters/${activeChapterName}/lectures`
+                    : `courses/${activeCourseKey}/subjects/${activeSubjectName}/lectures`;
+
+                rtdb.ref(path).set(lectures, (err) => {
+                    if(!err) {
+                        markDataAsUpdated();
+                        closeEditLecturePage();
+                        renderAdminLecturesList();
+                        renderAdminChaptersList();
+                    } else {
+                        alert('Error: ' + err.message);
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
