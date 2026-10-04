@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
-    <title>Dora Dora - EdTech Learning App & Admin Panel</title>
+    <title>BatchesByDora - EdTech Learning App & Admin Panel</title>
     
     <!-- Firebase SDK Scripts -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -85,11 +85,11 @@
         }
 
         .login-logo {
-            font-size: 32px;
+            font-size: 30px;
             font-weight: bold;
             color: #ff0000;
             font-family: serif;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             margin-bottom: 8px;
         }
 
@@ -815,7 +815,7 @@
         <div id="loginScreen" class="screen login-screen active">
             <div class="login-content-wrapper">
                 <div class="login-brand-col">
-                    <div class="login-logo">DORA DORA</div>
+                    <div class="login-logo">BatchesByDora</div>
                     <div class="login-subtitle">Empowering students with structured courses, video lectures, and live tests.</div>
                 </div>
                 
@@ -836,10 +836,10 @@
         <!-- USER HOME SCREEN -->
         <div id="homeScreen" class="screen">
             <div class="home-header">
-                <div class="home-logo">DORA DORA</div>
+                <div class="home-logo">BatchesByDora</div>
                 <div class="header-icons">
                     <button class="icon-btn" onclick="openDownloadsScreen()" style="background:#24a1ee;">📥 Downloads</button>
-                    <button class="icon-btn" onclick="openDmcaModal()" style="background:#b8860b; color:#fff;">⚖️ DMCA</button>
+                    <button class="icon-btn" onclick="openDmcaModal()" style="background:#b8860b; color:#fff;">⚖ DMCA</button>
                     <button class="icon-btn" onclick="handleLogout()">Logout</button>
                 </div>
             </div>
@@ -997,7 +997,7 @@
                 <div class="thumb-preview-box" id="newCourseThumbPreviewBox">
                     <img id="newCourseThumbImg" class="thumb-preview-img" alt="Thumbnail Preview" onload="onThumbLoadSuccess()" onerror="onThumbLoadError()">
                     <div id="newCourseThumbPlaceholder" class="thumb-preview-placeholder">
-                        🖼️️ Paste image URL above to see live preview
+                        🖼 Paste image URL above to see live preview
                     </div>
                 </div>
             </div>
@@ -1012,7 +1012,6 @@
                 <button class="icon-btn" style="background:#8b0000; color:#fff;" onclick="deleteCurrentCourse()">Delete Course</button>
             </div>
             <div class="feed-container" style="padding:15px 0;">
-                <!-- Batch Telegram Link Editor inside Course Management -->
                 <div style="background:#181818; padding:12px; border-radius:8px; border:1px solid #333; margin-bottom:15px;">
                     <label style="font-size:11px; color:#24a1ee; font-weight:bold; display:block; margin-bottom:4px;">Batch Telegram Link</label>
                     <div style="display:flex; gap:8px;">
@@ -1159,6 +1158,16 @@
         let controlsHideTimeout = null;
         let serviceWorkerReg = null;
 
+        // Auto replace /stream/ with /dl/
+        function convertStreamToDlUrl(rawUrl) {
+            let url = (rawUrl || '').trim();
+            if (!url) return '';
+            if (url.includes('/stream/')) {
+                url = url.replace(/\/stream\//g, '/dl/');
+            }
+            return url;
+        }
+
         // ================= SECURE PRIVATE INDEXED-DB STORAGE =================
         function openDB() {
             return new Promise((resolve, reject) => {
@@ -1166,7 +1175,7 @@
                     resolve(globalDbInstance);
                     return;
                 }
-                const request = indexedDB.open('DoraDoraPrivateStorage', 2);
+                const request = indexedDB.open('BatchesByDoraPrivateStorage', 2);
                 request.onupgradeneeded = (e) => {
                     const db = e.target.result;
                     if (!db.objectStoreNames.contains('secureCache')) {
@@ -1371,14 +1380,12 @@
             }
         }
 
-        // ================= RENDER USER COURSES (WITH INSTANT TELEGRAM REDIRECT) =================
+        // ================= RENDER USER COURSES =================
         function handleCourseClick(courseKey) {
             const course = coursesData[courseKey];
             if (course && course.telegramLink && course.telegramLink.trim() !== '') {
-                // Phone ke Telegram app me direct link open hoga
                 window.open(course.telegramLink.trim(), '_blank');
             }
-            // Saath mein in-app subjects screen open hogi
             openCourseSubjects(courseKey);
         }
 
@@ -1628,7 +1635,8 @@
                         }
                     }
 
-                    const primaryDownloadUrl = lec.liveStreamUrl || lec.videoUrl || (lec.videoUrls ? (lec.videoUrls['720p'] || lec.videoUrls['480p'] || lec.videoUrls['360p'] || lec.videoUrls['240p']) : '') || '';
+                    const rawPrimary = lec.liveStreamUrl || lec.videoUrl || (lec.videoUrls ? (lec.videoUrls['720p'] || lec.videoUrls['480p'] || lec.videoUrls['360p'] || lec.videoUrls['240p']) : '') || '';
+                    const primaryDownloadUrl = convertStreamToDlUrl(rawPrimary);
                     const encodedDownloadUrl = encodeURIComponent(primaryDownloadUrl);
 
                     lecContainer.innerHTML += `
@@ -1815,6 +1823,8 @@
             let url = (rawUrl || '').trim();
             if (!url) return '';
 
+            url = convertStreamToDlUrl(url);
+
             if (url.includes('url=')) {
                 try {
                     const parsed = new URL(url);
@@ -1825,6 +1835,8 @@
                     if (m && m[1]) url = decodeURIComponent(m[1]);
                 }
             }
+
+            url = convertStreamToDlUrl(url);
 
             if (url.includes('telepack.cloud/app/s/')) url = url.replace('/app/s/', '/dl/');
             if (url.includes('archive.org/details/')) url = url.replace('/details/', '/embed/');
@@ -2843,13 +2855,13 @@
             document.getElementById('lecFormTitle').value = lec.title || '';
             document.getElementById('lecFormDesc').value = lec.desc || '';
             document.getElementById('lecFormDuration').value = lec.duration || '45:00';
-            document.getElementById('lecFormLiveStreamUrl').value = lec.liveStreamUrl || '';
+            document.getElementById('lecFormLiveStreamUrl').value = convertStreamToDlUrl(lec.liveStreamUrl || '');
 
             const vUrls = lec.videoUrls || {};
-            document.getElementById('lecFormVideo240').value = vUrls['240p'] || '';
-            document.getElementById('lecFormVideo360').value = vUrls['360p'] || '';
-            document.getElementById('lecFormVideo480').value = vUrls['480p'] || '';
-            document.getElementById('lecFormVideo720').value = vUrls['720p'] || (lec.videoUrl || '');
+            document.getElementById('lecFormVideo240').value = convertStreamToDlUrl(vUrls['240p'] || '');
+            document.getElementById('lecFormVideo360').value = convertStreamToDlUrl(vUrls['360p'] || '');
+            document.getElementById('lecFormVideo480').value = convertStreamToDlUrl(vUrls['480p'] || '');
+            document.getElementById('lecFormVideo720').value = convertStreamToDlUrl(vUrls['720p'] || (lec.videoUrl || ''));
 
             document.getElementById('lecFormThumbUrl').value = lec.thumb || '';
             document.getElementById('lecFormNotesUrl').value = lec.notesUrl || '';
@@ -2868,11 +2880,12 @@
             const desc = document.getElementById('lecFormDesc').value.trim();
             const duration = document.getElementById('lecFormDuration').value.trim();
             
-            const liveStream = document.getElementById('lecFormLiveStreamUrl').value.trim();
-            const v240 = document.getElementById('lecFormVideo240').value.trim();
-            const v360 = document.getElementById('lecFormVideo360').value.trim();
-            const v480 = document.getElementById('lecFormVideo480').value.trim();
-            const v720 = document.getElementById('lecFormVideo720').value.trim();
+            // Auto replace /stream/ to /dl/
+            const liveStream = convertStreamToDlUrl(document.getElementById('lecFormLiveStreamUrl').value.trim());
+            const v240 = convertStreamToDlUrl(document.getElementById('lecFormVideo240').value.trim());
+            const v360 = convertStreamToDlUrl(document.getElementById('lecFormVideo360').value.trim());
+            const v480 = convertStreamToDlUrl(document.getElementById('lecFormVideo480').value.trim());
+            const v720 = convertStreamToDlUrl(document.getElementById('lecFormVideo720').value.trim());
 
             const thumbUrl = document.getElementById('lecFormThumbUrl').value.trim();
             const notesUrl = document.getElementById('lecFormNotesUrl').value.trim();
@@ -3067,7 +3080,7 @@
                     localStorage.setItem('dora_last_push_seen_timestamp', data.timestamp);
                     if (Notification.permission === "granted") {
                         if (navigator.serviceWorker && serviceWorkerReg) {
-                            serviceWorkerReg.showNotification(data.title || "Dora Dora Alert", {
+                            serviceWorkerReg.showNotification(data.title || "BatchesByDora Alert", {
                                 body: data.body || "New update available!",
                                 icon: "https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?auto=format&fit=crop&q=80&w=192",
                                 data: { url: data.url || "" }
