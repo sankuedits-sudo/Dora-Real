@@ -13,6 +13,11 @@
     <!-- HLS.js CDN for Live Stream (.m3u8) Support -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
+    <script>
+        // Dora Dora Token API (Render)
+        const DORA_TOKEN_API_URL = 'https://dora-bot-token.onrender.com';
+    </script>
+
     <style>
         * {
             box-sizing: border-box;
@@ -688,6 +693,119 @@
             100% { opacity: 1; transform: translate(-50%, 0); }
         }
 
+        /* TOKEN PROMPT MODAL */
+        .token-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(4, 5, 8, 0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            z-index: 6500;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .token-modal-overlay.active {
+            display: flex;
+        }
+        .token-glass-card {
+            width: 100%;
+            max-width: 340px;
+            background: radial-gradient(130% 90% at 50% 0%, rgba(255, 0, 0, 0.15) 0%, rgba(20, 20, 26, 0.98) 50%, rgba(10, 11, 15, 0.99) 100%);
+            border: 1px solid rgba(255, 0, 0, 0.35);
+            border-radius: 26px;
+            padding: 26px 20px 22px;
+            text-align: center;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.95), 0 0 40px rgba(255, 0, 0, 0.18);
+            animation: luxurySpring 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .token-badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 0, 0, 0.15);
+            border: 1px solid rgba(255, 0, 0, 0.4);
+            padding: 4px 12px;
+            border-radius: 30px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: #ff4d4d;
+            margin-bottom: 12px;
+        }
+        .token-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+        .token-desc {
+            font-size: 11px;
+            color: #aaa;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+        .token-get-link-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #24a1ee 0%, #0077b6 100%);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 800;
+            box-shadow: 0 6px 20px rgba(36, 161, 238, 0.35);
+            margin-bottom: 14px;
+            transition: transform 0.2s;
+        }
+        .token-get-link-btn:active {
+            transform: scale(0.97);
+        }
+        .token-input-field {
+            width: 100%;
+            padding: 12px;
+            background: #18181c;
+            border: 1px solid #3e3e4a;
+            color: #fff;
+            border-radius: 10px;
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-align: center;
+            text-transform: uppercase;
+            outline: none;
+            margin-bottom: 12px;
+            font-weight: bold;
+        }
+        .token-input-field:focus {
+            border-color: #ff0000;
+        }
+        .token-submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255, 0, 0, 0.35);
+            margin-bottom: 10px;
+        }
+        .token-cancel-btn {
+            background: transparent;
+            color: #888;
+            border: none;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
         /* WHATSAPP MODAL */
         .wa-channel-modal {
             position: fixed;
@@ -1039,7 +1157,7 @@
             border-radius: 20px;
             background: linear-gradient(135deg, rgba(255, 179, 0, 0.25) 0%, rgba(255, 179, 0, 0.05) 100%);
             border: 1px solid rgba(255, 179, 0, 0.5);
-            display: flex;
+            display: center;
             align-items: center;
             justify-content: center;
             box-shadow: 0 10px 25px rgba(255, 179, 0, 0.2);
@@ -1464,9 +1582,43 @@
                 <div style="font-size:24px;">👥</div>
             </div>
 
+            <!-- TOKEN ACCESS CONTROL -->
+            <div style="background:#181818; padding:14px; border-radius:10px; border:1px solid #ff4444; margin-bottom:15px;">
+                <label style="font-size:12px; font-weight:bold; color:#ff4444; display:block; margin-bottom:8px;">🔐 Token Access Control</label>
+
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:#222; border:1px solid #333; padding:10px; border-radius:8px; margin-bottom:10px;">
+                    <div>
+                        <div style="font-size:12px; font-weight:bold; color:#fff;">Require Token Before Video</div>
+                        <div style="font-size:10px; color:#888; margin-top:3px;">OFF karne par sabhi users bina token ke video chala sakenge.</div>
+                    </div>
+                    <button id="adminTokenToggleBtn" onclick="toggleTokenRequirement()" style="min-width:72px; padding:7px 10px; border:none; border-radius:20px; color:#fff; font-size:10px; font-weight:800; cursor:pointer;">ON</button>
+                </div>
+
+                <label style="font-size:11px; color:#aaa; display:block; margin-bottom:4px;">Access Duration After Token:</label>
+                <div style="display:flex; gap:8px; margin-bottom:6px;">
+                    <input type="number" id="adminTokenHoursInput" placeholder="24" min="0" max="8760" style="flex:1; padding:8px; background:#222; border:1px solid #444; color:#fff; border-radius:6px; font-size:12px;">
+                    <button onclick="saveTokenHoursSetting()" style="background:#ff0000; color:#fff; border:none; padding:8px 12px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:bold;">Save</button>
+                </div>
+                <div style="font-size:10px; color:#777; margin-bottom:10px;">0 = Unlimited access on this device after one successful token.</div>
+
+                <label style="font-size:11px; color:#aaa; display:block; margin-bottom:4px;">Telegram Bot / Token Link:</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="adminTokenLinkInput" placeholder="https://t.me/YourBot?start=gettoken" style="flex:1; padding:8px; background:#222; border:1px solid #444; color:#fff; border-radius:6px; font-size:11px;">
+                    <button onclick="saveTokenShortenerLink()" style="background:#24a1ee; color:#fff; border:none; padding:8px 12px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:bold;">Save Link</button>
+                </div>
+
+                <div style="margin-top:10px; background:#111; border:1px solid #292929; border-radius:8px; padding:9px; font-size:10px; color:#888; line-height:1.5;">
+                    <b style="color:#ddd;">Token rule:</b> har token sirf <b style="color:#fff;">1 baar</b> claim hoga. Successful claim ke baad current device ko selected duration tak access milega.
+                </div>
+            </div>
+
+            <button onclick="if(confirm('All existing video access sessions ko invalidate karna hai?')) invalidateAllTokenSessions();" style="width:100%; background:#6b1d1d; color:#fff; border:1px solid #a33; padding:9px; border-radius:8px; font-size:11px; font-weight:700; cursor:pointer; margin-top:-7px; margin-bottom:15px;">
+                ♻️ Invalidate All Existing Video Access
+            </button>
+
             <!-- BROADCAST PUSH NOTIFICATION BOX -->
-            <div style="background:#181818; padding:14px; border-radius:8px; border:1px solid #ff0000; margin-bottom:15px;">
-                <label style="font-size:12px; font-weight:bold; color:#ff4444; display:block; margin-bottom:6px;">🚀 Send Instant Push Notification (Screen Off Support)</label>
+            <div style="background:#181818; padding:14px; border-radius:8px; border:1px solid #333; margin-bottom:15px;">
+                <label style="font-size:12px; font-weight:bold; color:#ff4444; display:block; margin-bottom:6px;">🚀 Send Instant Push Notification</label>
                 
                 <input type="text" id="pushTitleInput" placeholder="Notification Heading" style="width:100%; padding:8px; background:#222; border:1px solid #444; color:#fff; border-radius:6px; font-size:12px; margin-bottom:8px;">
                 
@@ -1549,7 +1701,7 @@
             <button class="btn-full" onclick="addNewCourse()">Save Course</button>
         </div>
 
-        <!-- SUB-PAGE: EDIT COURSE (NEW) -->
+        <!-- SUB-PAGE: EDIT COURSE -->
         <div id="editCoursePage" class="sub-page">
             <div class="back-nav-bar" style="margin:-20px -20px 20px -20px;">
                 <button class="back-btn" onclick="closeEditCoursePage()">‹ Cancel</button>
@@ -1685,6 +1837,32 @@
     <!-- TOAST NOTIFICATION FOR COPIED LINK -->
     <div id="copyToast" class="floating-copy-toast">
         <span>✅</span> Video Link Copied to Clipboard!
+    </div>
+
+    <!-- TOKEN ACCESS VERIFICATION MODAL -->
+    <div class="token-modal-overlay" id="tokenVerifyModal">
+        <div class="token-glass-card">
+            <div class="token-badge-pill">
+                <span>🔐</span> Access Pass Required
+            </div>
+
+            <div class="token-title" id="tokenModalTitle">Video Access Locked</div>
+            <div class="token-desc" id="tokenModalDesc">
+                Video dekhne ke liye token verify karein. Token pane ke liye button dabakar link shortener complete karein.
+            </div>
+
+            <a id="tokenRedirectBtn" href="#" target="_blank" class="token-get-link-btn">
+                <span>⚡</span> 1. Get Access Token (Shortener)
+            </a>
+
+            <div style="font-size:11px; color:#8e8e93; margin-bottom:6px; text-align:left;">Paste the verified token below:</div>
+            <input type="text" id="userInputToken" class="token-input-field" placeholder="DORA-XXXXXX" maxlength="20">
+
+            <button class="token-submit-btn" id="verifyTokenBtn" onclick="verifyAndActivateToken()">
+                2. Verify & Unlock Access
+            </button>
+            <button class="token-cancel-btn" onclick="closeTokenModal()">Cancel</button>
+        </div>
     </div>
 
     <!-- STUDENT NOTICE MODAL -->
@@ -1847,6 +2025,9 @@
 
         let coursesData = {};
         let appSettings = JSON.parse(localStorage.getItem('dora_cached_settings')) || {};
+        if (typeof appSettings.tokenEnabled === 'undefined') appSettings.tokenEnabled = true;
+        if (typeof appSettings.tokenHours === 'undefined') appSettings.tokenHours = 24;
+        if (typeof appSettings.tokenAccessVersion === 'undefined') appSettings.tokenAccessVersion = 1;
         let allUsersData = {};
         let isCoursesLoaded = false;
         let currentUser = localStorage.getItem('doradoraUser') || null;
@@ -1870,6 +2051,7 @@
         let controlsHideTimeout = null;
 
         let serviceWorkerReg = null;
+        let pendingLectureIndexToPlay = null;
 
         function registerBackgroundServiceWorker() {
             if ('serviceWorker' in navigator) {
@@ -2008,20 +2190,16 @@
             rtdb.ref('lastUpdated').set(now);
         }
 
-        /* SMART SYNC: Checks small timestamp (~20 bytes) before downloading 58MB */
         function initSmartDataSync() {
             rtdb.ref('lastUpdated').on('value', async (snap) => {
                 const serverVersion = snap.val() || 0;
                 const localVersion = Number(localStorage.getItem('dora_cached_version')) || 0;
 
-                // Check if IndexedDB has courses data
                 const cachedCourses = await getCachedData('doradora_cached_courses');
 
                 if (!cachedCourses || serverVersion > localVersion) {
-                    console.log("⚡ New content detected on server or first run. Fetching latest database...");
                     fetchCoursesWithProgress(serverVersion);
                 } else {
-                    console.log("⚡ Database is 100% up-to-date. Loaded instantly from IndexedDB (Saved 58MB data)!");
                     coursesData = cachedCourses;
                     isCoursesLoaded = true;
                     refreshCurrentActiveView();
@@ -2045,7 +2223,6 @@
             if (isSyncingInBackground) return;
             isSyncingInBackground = true;
 
-            // Only show loader if we have NO cached courses to display
             if (!coursesData || Object.keys(coursesData).length === 0) {
                 isCoursesLoaded = false;
                 updateCoursesProgressUI(0, 'Connecting to cloud database...');
@@ -2161,6 +2338,269 @@
             setTimeout(() => showWhatsAppPopup(), 450);
         }
 
+        /* ================= TOKEN & SETTINGS HANDLING ================= */
+        function isTokenSystemEnabled() {
+            return appSettings.tokenEnabled !== false;
+        }
+
+        function isUserVideoAccessValid() {
+            if (currentUser === '1111') return true; // Admin bypass
+            if (!isTokenSystemEnabled()) return true;
+
+            const expiry = Number(localStorage.getItem('dora_token_expiry_timestamp')) || 0;
+            const accessVersion = String(localStorage.getItem('dora_token_access_version') || '');
+            const serverVersion = String(appSettings.tokenAccessVersion || '1');
+
+            if (accessVersion !== serverVersion) return false;
+
+            // -1 means unlimited until admin changes the access version.
+            if (expiry === -1) return true;
+
+            return expiry > 0 && Date.now() < expiry;
+        }
+
+        function getTokenDurationText() {
+            const hours = Number(appSettings.tokenHours);
+            if (!Number.isFinite(hours) || hours === 0) return 'Unlimited';
+            if (hours === 1) return '1 hour';
+            return `${hours} hours`;
+        }
+
+        function showTokenVerificationModal(lecIdx) {
+            pendingLectureIndexToPlay = lecIdx;
+            const input = document.getElementById('userInputToken');
+            if (input) input.value = '';
+
+            const hours = Number(appSettings.tokenHours);
+            const durationText = (!Number.isFinite(hours) || hours === 0) ? 'Unlimited' : getTokenDurationText();
+            const redirectLink = appSettings.tokenShortenerLink || 'https://t.me/';
+
+            const titleElem = document.getElementById('tokenModalTitle');
+            const descElem = document.getElementById('tokenModalDesc');
+            const getBtn = document.getElementById('tokenRedirectBtn');
+
+            if (titleElem) titleElem.innerText = `${durationText} Access Pass`;
+            if (descElem) {
+                descElem.innerText = `Telegram bot se one-time token lijiye aur yahan enter kijiye. Ek successful token ke baad ${durationText.toLowerCase()} tak videos bina dobara token dale chalengi.`;
+            }
+            if (getBtn) {
+                getBtn.href = redirectLink;
+                getBtn.innerHTML = '<span>🤖</span> 1. Get Token from Telegram Bot';
+            }
+
+            const modal = document.getElementById('tokenVerifyModal');
+            if (modal) modal.classList.add('active');
+        }
+
+        function closeTokenModal() {
+            const modal = document.getElementById('tokenVerifyModal');
+            if (modal) modal.classList.remove('active');
+            pendingLectureIndexToPlay = null;
+        }
+
+        function resetTokenVerifyButton() {
+            const btn = document.getElementById('verifyTokenBtn');
+            if (btn) {
+                btn.innerText = '2. Verify & Unlock Access';
+                btn.disabled = false;
+            }
+        }
+
+        async function verifyAndActivateToken() {
+            const input = document.getElementById('userInputToken');
+            const token = input ? input.value.trim().toUpperCase() : '';
+            const btn = document.getElementById('verifyTokenBtn');
+
+            if (!token) {
+                alert('Kripya token code enter karein!');
+                return;
+            }
+
+            if (!isTokenSystemEnabled()) {
+                closeTokenModal();
+                return;
+            }
+
+            if (btn) {
+                btn.innerText = 'Verifying Token...';
+                btn.disabled = true;
+            }
+
+            try {
+                const appUser = String(currentUser || localStorage.getItem('dora_current_user') || 'guest');
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 25000);
+
+                const response = await fetch(DORA_TOKEN_API_URL + '/api/token/verify', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token: token,
+                        app_user: appUser
+                    }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch (_) {
+                    data = null;
+                }
+
+                if (!response.ok) {
+                    throw new Error((data && (data.message || data.detail)) || ('HTTP ' + response.status));
+                }
+
+                if (!data || data.ok !== true) {
+                    const message = data && data.message ? String(data.message) : 'Invalid or already used token.';
+
+                    if (/already been used|already used|used/i.test(message)) {
+                        throw new Error('TOKEN_ALREADY_USED');
+                    }
+                    throw new Error('INVALID_TOKEN');
+                }
+
+                // The API is the source of truth for duration/version.
+                const apiHours = Number(data.duration_hours);
+                const safeHours = Number.isFinite(apiHours) && apiHours >= 0
+                    ? apiHours
+                    : (Number.isFinite(Number(appSettings.tokenHours)) && Number(appSettings.tokenHours) >= 0
+                        ? Number(appSettings.tokenHours)
+                        : 24);
+
+                const serverVersion = String(
+                    data.access_version || appSettings.tokenAccessVersion || '1'
+                );
+
+                if (safeHours === 0) {
+                    localStorage.setItem('dora_token_expiry_timestamp', '-1');
+                } else {
+                    const expiryTimestamp = Date.now() + (safeHours * 60 * 60 * 1000);
+                    localStorage.setItem('dora_token_expiry_timestamp', String(expiryTimestamp));
+                }
+
+                localStorage.setItem('dora_token_access_version', serverVersion);
+                localStorage.setItem('dora_token_last_claimed', token);
+
+                const durationText = safeHours === 0
+                    ? 'Unlimited'
+                    : `${safeHours} hours`;
+
+                alert(`✅ Token Verified! ${durationText} ke liye video access unlock ho gaya.`);
+
+                const toPlay = pendingLectureIndexToPlay;
+                closeTokenModal();
+
+                if (toPlay !== null && toPlay !== undefined) {
+                    setTimeout(() => openVideoModal(toPlay), 100);
+                }
+            } catch (err) {
+                if (err && err.name === 'AbortError') {
+                    alert('⏳ Token server response mein zyada time lag raha hai. 10–20 second baad dobara try karein.');
+                } else if (err && err.message === 'INVALID_TOKEN') {
+                    alert('❌ Invalid Token! Kripya Telegram bot se naya token lijiye.');
+                } else if (err && err.message === 'TOKEN_ALREADY_USED') {
+                    alert('⚠️ Ye token pehle hi use ho chuka hai. Har token sirf ek baar valid hota hai.');
+                } else {
+                    console.error('Token API verification error:', err);
+                    alert('⚠️ Token verification server se connect nahi ho pa raha. Internet/API check karke dobara try karein.');
+                }
+                resetTokenVerifyButton();
+            }
+        }
+
+        function saveTokenHoursSetting() {
+            const input = document.getElementById('adminTokenHoursInput');
+            const val = Number(input ? input.value.trim() : 24);
+
+            if (!Number.isFinite(val) || val < 0 || val > 8760) {
+                alert('Hours 0 se 8760 ke beech hona chahiye. 0 = Unlimited.');
+                return;
+            }
+
+            appSettings.tokenHours = val;
+            localStorage.setItem('dora_cached_settings', JSON.stringify(appSettings));
+
+            rtdb.ref('settings/tokenHours').set(val, (err) => {
+                if (!err) {
+                    alert(val === 0 ? 'Token access set to Unlimited.' : `Token validity set to ${val} hours.`);
+                    applySettingsUI(appSettings);
+                } else {
+                    alert('Error: ' + err.message);
+                }
+            });
+        }
+
+        function toggleTokenRequirement() {
+            const nextState = !isTokenSystemEnabled();
+            appSettings.tokenEnabled = nextState;
+            localStorage.setItem('dora_cached_settings', JSON.stringify(appSettings));
+
+            rtdb.ref('settings/tokenEnabled').set(nextState, (err) => {
+                if (err) {
+                    alert('Error: ' + err.message);
+                    return;
+                }
+
+                if (!nextState) {
+                    localStorage.removeItem('dora_token_expiry_timestamp');
+                    localStorage.removeItem('dora_token_access_version');
+                }
+
+                applySettingsUI(appSettings);
+                alert(nextState
+                    ? '🔐 Token requirement ON. Users must verify a token before watching videos.'
+                    : '🔓 Token requirement OFF. Videos can be played without a token.');
+            });
+        }
+
+        function invalidateAllTokenSessions() {
+            const currentVersion = Number(appSettings.tokenAccessVersion) || 1;
+            const newVersion = currentVersion + 1;
+
+            rtdb.ref('settings/tokenAccessVersion').set(newVersion, (err) => {
+                if (err) {
+                    alert('Error: ' + err.message);
+                    return;
+                }
+
+                appSettings.tokenAccessVersion = newVersion;
+                localStorage.setItem('dora_cached_settings', JSON.stringify(appSettings));
+                localStorage.removeItem('dora_token_expiry_timestamp');
+                localStorage.removeItem('dora_token_access_version');
+
+                alert('✅ All previously granted device sessions have been invalidated. New token required.');
+            });
+        }
+
+        function saveTokenShortenerLink() {
+            const input = document.getElementById('adminTokenLinkInput');
+            const link = input ? input.value.trim() : '';
+
+            if (!link || !/^https?:\/\//i.test(link)) {
+                alert('Kripya valid Telegram bot URL enter karein.');
+                return;
+            }
+
+            appSettings.tokenShortenerLink = link;
+            localStorage.setItem('dora_cached_settings', JSON.stringify(appSettings));
+
+            rtdb.ref('settings/tokenShortenerLink').set(link, (err) => {
+                if (!err) {
+                    alert('Telegram token bot link updated successfully!');
+                    applySettingsUI(appSettings);
+                } else {
+                    alert('Error: ' + err.message);
+                }
+            });
+        }
+
         function applySettingsUI(settings) {
             if (!settings) return;
             const tgLink = settings.telegramLink || 'https://t.me/';
@@ -2184,6 +2624,29 @@
             if (waDisplayMsg) {
                 waDisplayMsg.innerText = waMessage.trim() ? waMessage : "Join our official WhatsApp channel for latest lectures, notes & important class updates!";
             }
+
+            const tokenLink = settings.tokenShortenerLink || 'https://t.me/';
+            const adminTokenLinkInput = document.getElementById('adminTokenLinkInput');
+            if (adminTokenLinkInput && !adminTokenLinkInput.matches(':focus')) adminTokenLinkInput.value = tokenLink;
+
+            const tokenRedirectBtn = document.getElementById('tokenRedirectBtn');
+            if (tokenRedirectBtn) tokenRedirectBtn.href = tokenLink;
+
+            const tokenHours = (settings.tokenHours === undefined || settings.tokenHours === null)
+                ? 24
+                : Number(settings.tokenHours);
+            const adminHoursInput = document.getElementById('adminTokenHoursInput');
+            if (adminHoursInput && !adminHoursInput.matches(':focus')) {
+                adminHoursInput.value = Number.isFinite(tokenHours) ? tokenHours : 24;
+            }
+
+            const tokenToggleBtn = document.getElementById('adminTokenToggleBtn');
+            if (tokenToggleBtn) {
+                const enabled = settings.tokenEnabled !== false;
+                tokenToggleBtn.innerText = enabled ? 'ON' : 'OFF';
+                tokenToggleBtn.style.background = enabled ? '#19a463' : '#555';
+                tokenToggleBtn.title = enabled ? 'Token verification is enabled' : 'Token verification is disabled';
+            }
         }
 
         window.onload = async function() {
@@ -2191,7 +2654,6 @@
             registerBackgroundServiceWorker();
             listenForPushBroadcasts();
 
-            // 1. FAST LOCAL LOAD FROM INDEXEDDB (Instant Opening Without 58MB Download)
             const cachedCourses = await getCachedData('doradora_cached_courses');
             if (cachedCourses && typeof cachedCourses === 'object' && Object.keys(cachedCourses).length > 0) {
                 coursesData = cachedCourses;
@@ -2211,7 +2673,6 @@
                 switchScreen('loginScreen', false);
             }
 
-            // 2. CHECK IF ADMIN ADDED NEW CONTENT (Smart Sync)
             initSmartDataSync();
 
             rtdb.ref('settings').on('value', (snapshot) => {
@@ -2233,13 +2694,17 @@
                 if(countElem) countElem.innerText = count;
             });
 
-            // Native Phone Back Button Handler
             window.addEventListener('popstate', function(event) {
                 const universalModal = document.getElementById('universalModal');
                 const dmcaModal = document.getElementById('dmcaModal');
                 const waModal = document.getElementById('waChannelModal');
                 const langModal = document.getElementById('languageModal');
+                const tokenModal = document.getElementById('tokenVerifyModal');
 
+                if (tokenModal && tokenModal.classList.contains('active')) {
+                    closeTokenModal();
+                    return;
+                }
                 if (universalModal && universalModal.classList.contains('active')) {
                     closeModal();
                     return;
@@ -2380,6 +2845,7 @@
         function switchScreen(screenId, pushHistory = true) {
             closeModal();
             closeDmcaModal();
+            closeTokenModal();
             if (pushHistory) {
                 history.pushState({ screen: screenId }, "", "");
             }
@@ -2455,6 +2921,7 @@
         function handleLogout() {
             closeModal();
             closeDmcaModal();
+            closeTokenModal();
             currentUser = null;
             waPopupShownThisSession = false;
             localStorage.removeItem('doradoraUser');
@@ -2560,6 +3027,7 @@
         function openCourseSubjects(courseKey) {
             closeModal();
             closeDmcaModal();
+            closeTokenModal();
             activeCourseKey = courseKey;
             activeSubjectName = null;
             activeChapterName = null;
@@ -2589,18 +3057,21 @@
         function goBackToHome() {
             closeModal();
             closeDmcaModal();
+            closeTokenModal();
             switchScreen('homeScreen');
         }
 
         function openSubjectList() {
             closeModal();
             closeDmcaModal();
+            closeTokenModal();
             switchScreen('subjectScreen');
         }
 
         function openUserChapters(subName) {
             closeModal();
             closeDmcaModal();
+            closeTokenModal();
             activeSubjectName = subName;
             activeChapterName = null;
             document.getElementById('navChapterTitleHeader').innerText = subName;
@@ -2611,6 +3082,7 @@
         function goBackToChapters() {
             closeModal();
             closeDmcaModal();
+            closeTokenModal();
             activeChapterName = null;
             renderChaptersListUI();
             switchScreen('chapterScreen');
@@ -2654,6 +3126,7 @@
         function openUserLectures(chapterName) {
             closeModal();
             closeDmcaModal();
+            closeTokenModal();
             activeChapterName = chapterName;
             const header = chapterName ? chapterName : 'Existing Lectures';
             document.getElementById('navSubjectTitleHeader').innerText = header;
@@ -2763,6 +3236,11 @@
         }
 
         function copyVideoDownloadLink(encodedUrl) {
+            if (!isUserVideoAccessValid()) {
+                showTokenVerificationModal(null);
+                return;
+            }
+
             const rawUrl = decodeURIComponent(encodedUrl || '').trim();
 
             if (!rawUrl) {
@@ -2861,6 +3339,7 @@
         function openPdfViewer(title, url) {
             closeModal();
             closeDmcaModal();
+            closeTokenModal();
             const container = document.getElementById('modalBodyContent');
             document.getElementById('playerSettingsContainer').style.display = 'none';
             hideSeekControls();
@@ -2881,6 +3360,7 @@
         function openInAppQuizViewer(url) {
             closeModal();
             closeDmcaModal();
+            closeTokenModal();
             const container = document.getElementById('modalBodyContent');
             document.getElementById('playerSettingsContainer').style.display = 'none';
             hideSeekControls();
@@ -2893,6 +3373,7 @@
         function openDownloadsScreen() {
             closeModal();
             closeDmcaModal();
+            closeTokenModal();
             renderDownloadsList();
             switchScreen('downloadsScreen');
         }
@@ -3083,8 +3564,16 @@
         }
 
         function openVideoModal(lecIdx) {
+            // Check Access Token Validity (Controlled by Admin Settings)
+            if (!isUserVideoAccessValid()) {
+                showTokenVerificationModal(lecIdx);
+                return;
+            }
+
             closeModal();
             closeDmcaModal();
+            closeTokenModal();
+
             const subData = (coursesData[activeCourseKey] && coursesData[activeCourseKey].subjects) ? (coursesData[activeCourseKey].subjects[activeSubjectName] || {}) : {};
             const lectureList = activeChapterName !== null
                 ? (((subData.chapters || {})[activeChapterName] || {}).lectures || [])
@@ -3418,7 +3907,7 @@
             if (modal) modal.classList.remove('active');
         }
 
-        /* ================= ADMIN COURSES RENDERING WITH EDIT BUTTON ================= */
+        /* ================= ADMIN COURSES RENDERING ================= */
         function renderAdminCoursesList(filterQuery = '') {
             const container = document.getElementById('adminCoursesList');
             if(!container) return;
@@ -3475,7 +3964,6 @@
             }
         }
 
-        /* ================= COURSE EDIT MODAL LOGIC ================= */
         function openEditCoursePage(courseKey) {
             const course = coursesData[courseKey];
             if (!course) return;
@@ -3512,12 +4000,10 @@
                 coursesData[courseKey].heroImg = newImg;
             }
 
-            // Save to IndexedDB immediately
             setCachedData('doradora_cached_courses', coursesData);
             renderAdminCoursesList(document.getElementById('adminCourseSearchInput').value);
             closeEditCoursePage();
 
-            // Push to Firebase and update version
             const updates = {};
             updates[`courses/${courseKey}/name`] = newName;
             updates[`courses/${courseKey}/desc`] = newDesc || 'Course description';
