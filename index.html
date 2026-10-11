@@ -1524,7 +1524,6 @@
                 <div class="header-icons">
                     <button class="icon-btn" onclick="openDownloadsScreen()" style="background:#24a1ee;">📥 Downloads</button>
                     <button class="icon-btn" onclick="openDmcaModal()" style="background:#b8860b; color:#fff;">⚖️ DMCA</button>
-                    <button class="icon-btn" onclick="handleLogout()">Logout</button>
                 </div>
             </div>
             <div class="search-box">
@@ -1620,7 +1619,7 @@
             <!-- ADMIN PASSWORD SETTINGS -->
             <div style="background:#181818;padding:14px;border-radius:10px;border:1px solid #444;margin-bottom:15px;">
                 <label style="font-size:12px;font-weight:bold;color:#fff;display:block;margin-bottom:8px;">🛡️ Admin Password</label>
-                <div style="font-size:10px;color:#999;margin-bottom:10px;">Change the password used after tapping the DORA DORA logo five times.</div>
+                <div style="font-size:10px;color:#999;margin-bottom:10px;">Change the password used after tapping the DORA DORA logo 50 times.</div>
                 <input type="password" id="newAdminPasswordInput" placeholder="Enter new admin password" style="width:100%;padding:10px;background:#222;border:1px solid #444;color:#fff;border-radius:7px;margin-bottom:8px;">
                 <button class="icon-btn" onclick="changeAdminPassword()" style="background:#b00000;width:100%;padding:10px;">Save New Password</button>
             </div>
@@ -2956,8 +2955,8 @@
         function handleAdminLogoTap(event) {
             adminLogoTapCount++;
             if (adminLogoTapTimer) clearTimeout(adminLogoTapTimer);
-            adminLogoTapTimer = setTimeout(() => { adminLogoTapCount = 0; }, 1800);
-            if (adminLogoTapCount >= 5) {
+            adminLogoTapTimer = setTimeout(() => { adminLogoTapCount = 0; }, 15000);
+            if (adminLogoTapCount >= 50) {
                 adminLogoTapCount = 0;
                 const entered = prompt('Admin access password:');
                 if (entered === null) return;
@@ -3221,7 +3220,10 @@
 
             const subData = (coursesData[activeCourseKey] && coursesData[activeCourseKey].subjects) ? (coursesData[activeCourseKey].subjects[activeSubjectName] || {}) : {};
             const chapters = subData.chapters || {};
-            const chapterNames = Object.keys(chapters);
+            // Chapter list: natural ascending order (Chapter 1, Chapter 2, ... Chapter 10).
+            const chapterNames = Object.keys(chapters).sort((a, b) =>
+                String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' })
+            );
             const legacyLectures = subData.lectures || [];
 
             if (chapterNames.length === 0 && legacyLectures.length === 0) {
@@ -3294,12 +3296,16 @@
                 lectures = subData.lectures || [];
             }
 
+            // Lecture list: natural descending order so the newest/highest-numbered lecture appears first.
+            // Keeps originalIdx so opening/editing a lecture still targets the right item.
             lectures = lectures.map((lec, idx) => ({ lec, originalIdx: idx }));
             lectures.sort((a, b) => {
-                const numA = parseFloat(a.lec.title) || 0;
-                const numB = parseFloat(b.lec.title) || 0;
-                if (numA !== numB) return numB - numA;
-                return (b.lec.title || '').localeCompare(a.lec.title || '');
+                const titleA = String(a.lec.title || '');
+                const titleB = String(b.lec.title || '');
+                return titleB.localeCompare(titleA, undefined, {
+                    numeric: true,
+                    sensitivity: 'base'
+                });
             });
 
             let filteredLectures = lectures;
