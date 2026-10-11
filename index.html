@@ -1935,13 +1935,18 @@
         }
 
         async function setCachedData(key, value) {
-            try {
-                const db = await openDB();
-                const tx = db.transaction('cache', 'readwrite');
-                tx.objectStore('cache').put(value, key);
-            } catch(e) {
-                console.error("IndexedDB write error:", e);
-            }
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                try {
+                    const tx = db.transaction('cache', 'readwrite');
+                    tx.objectStore('cache').put(value, key);
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction failed'));
+                    tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+                } catch (e) {
+                    reject(e);
+                }
+            });
         }
 
         async function deleteCachedData(key) {
@@ -1987,6 +1992,13 @@
             if (statusLabel) statusLabel.innerText = text;
         }
 
+        function retryCourseDownload() {
+            if (isSyncingInBackground) return;
+            downloadPercent = 0;
+            updateCoursesProgressUI(0, 'Retrying course download...');
+            fetchCoursesWithProgress();
+        }
+
         function fetchCoursesWithProgress(serverVersion = null) {
             if (isSyncingInBackground) return;
             isSyncingInBackground = true;
@@ -2005,10 +2017,12 @@
 
             xhr.onprogress = function(event) {
                 if (event.lengthComputable && event.total > 0) {
-                    const p = Math.min(100, Math.round((event.loaded / event.total) * 100));
+                    const p = Math.min(99, Math.round((event.loaded / event.total) * 100));
                     const loadedMb = (event.loaded / (1024 * 1024)).toFixed(1);
                     const totalMb = (event.total / (1024 * 1024)).toFixed(1);
-                    updateCoursesProgressUI(p, `Downloading update (${loadedMb} MB / ${totalMb} MB)...`);
+                    updateCoursesProgressUI(p, `Downloading course data (${loadedMb} MB / ${totalMb} MB)...`);
+                } else {
+                    updateCoursesProgressUI(downloadPercent, 'Downloading course data from cloud...');
                 }
             };
 
@@ -2017,7 +2031,8 @@
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
                         updateCoursesProgressUI(100, 'Saving to secure local memory...');
-                        coursesData = JSON.parse(xhr.responseText) || {};
+                        const parsedCourses = JSON.parse(xhr.responseText);
+                        coursesData = (parsedCourses && typeof parsedCourses === 'object') ? parsedCourses : {};
                         await setCachedData('doradora_cached_courses', coursesData);
                         
                         const newVersion = serverVersion || Date.now();
@@ -2026,16 +2041,28 @@
                         isCoursesLoaded = true;
                         refreshCurrentActiveView();
                     } catch(e) {
-                        console.error("JSON parse error:", e);
+                        console.error("Course JSON/cache error:", e);
+                        updateCoursesProgressUI(0, 'Could not save course data. Tap here to retry.');
+                        const bar = document.getElementById('courseProgressBarFill');
+                        if (bar) bar.style.background = '#ff4d4d';
                     }
+                } else {
+                    updateCoursesProgressUI(0, `Cloud download failed (HTTP ${xhr.status}). Tap here to retry.`);
+                    console.warn("REST sync failed with status:", xhr.status);
                 }
             };
 
             xhr.onerror = function() {
                 isSyncingInBackground = false;
                 console.warn("REST sync failed.");
+                updateCoursesProgressUI(0, 'Network error. Check internet and tap here to retry.');
             };
 
+            xhr.ontimeout = function() {
+                isSyncingInBackground = false;
+                updateCoursesProgressUI(0, 'Download timed out. Check internet and tap here to retry.');
+            };
+            xhr.timeout = 45000;
             xhr.send();
         }
 
@@ -2642,6 +2669,63 @@
 
         // One-time unlock / anonymous device registration
         const DORA_INSTALL_KEY = 'doraInstallRegistrationId';
+        // First-open unlock: immediately dismiss welcome screen and show Home.
+        async function unlockCourses() {
+            const btn = document.getElementById('unlockCoursesBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerText = 'OPENING YOUR COURSES…';
+            }
+
+            try {
+                let installId = localStorage.getItem(DORA_INSTALL_KEY);
+                if (!installId) {
+                    installId = 'device_' + (
+                        window.crypto && typeof window.crypto.randomUUID === 'function'
+                            ? window.crypto.randomUUID()
+                            : (Date.now().toString(36) + Math.random().toString(36).slice(2, 12))
+                    );
+                    localStorage.setItem(DORA_INSTALL_KEY, installId);
+                }
+
+                currentUser = installId;
+                localStorage.setItem('doradoraUser', installId);
+                localStorage.setItem('doraCoursesUnlocked', '1');
+
+                // Switch immediately; Home shows the download progress if needed.
+                switchScreen('homeScreen');
+                renderUserCourses();
+
+                const cachedCourses = await getCachedData('doradora_cached_courses');
+                if (cachedCourses && typeof cachedCourses === 'object' && Object.keys(cachedCourses).length > 0) {
+                    coursesData = cachedCourses;
+                    isCoursesLoaded = true;
+                    renderUserCourses();
+                    updateCoursesProgressUI(100, 'Course library loaded from this device.');
+                } else {
+                    coursesData = {};
+                    isCoursesLoaded = false;
+                    downloadPercent = 0;
+                    updateCoursesProgressUI(0, 'Preparing your course library...');
+                    renderUserCourses();
+                }
+
+                // Do not depend on Firebase's listener having not already fired.
+                fetchCoursesWithProgress();
+                setTimeout(checkAndShowDailyDisclaimer, 350);
+            } catch (err) {
+                console.error('Course unlock error:', err);
+                alert('Course setup mein problem aayi. Internet check karke Home screen par retry karein.');
+                switchScreen('homeScreen');
+                renderUserCourses();
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'UNLOCK YOUR COURSES&nbsp; →';
+                }
+            }
+        }
+
         function handleLogout() {
             closeModal();
             closeDmcaModal();
@@ -2693,7 +2777,7 @@
                         </div>
 
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div id="courseProgressStatusText" style="color:#aaa; font-size:11px;">${downloadStatusText}</div>
+                            <div id="courseProgressStatusText" onclick="retryCourseDownload()" style="color:#aaa; font-size:11px; cursor:pointer;">${downloadStatusText}</div>
                             <div id="courseProgressPercentText" style="color:#24a1ee; font-size:12px; font-weight:800;">${downloadPercent}%</div>
                         </div>
                     </div>
