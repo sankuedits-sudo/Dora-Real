@@ -1614,6 +1614,14 @@
                 </div>
                 <div style="font-size:24px;">👥</div>
             </div>
+            <div class="admin-stats-box">
+                <div>
+                    <div style="font-size:11px; color:#aaa;">Today's Active Users (Okay clicked)</div>
+                    <div id="todayActiveUsersCount" style="font-size:20px; font-weight:bold; color:#32d74b;">0</div>
+                    <div style="font-size:10px;color:#777;margin-top:3px;">Unique devices for today's date</div>
+                </div>
+                <div style="font-size:24px;">📈</div>
+            </div>
 
             <!-- TOKEN ACCESS CONTROL -->
             <div style="background:#181818; padding:14px; border-radius:10px; border:1px solid #ff4444; margin-bottom:15px;">
@@ -2399,9 +2407,16 @@
             }
         }
 
-        function handleDisclaimerOk() {
-            const today = new Date().toISOString().split('T')[0];
+        async function handleDisclaimerOk() {
+            const today = doraLocalDateKey();
             localStorage.setItem('dora_last_disclaimer_date', today);
+
+            // Count this installation once for the day after the user taps Okay.
+            try {
+                await recordDoraDailyActive(currentUser);
+            } catch (activeCountError) {
+                console.error('Daily active-user count could not be synced:', activeCountError);
+            }
             const modal = document.getElementById('disclaimerModal');
             if (modal) {
                 modal.classList.remove('active');
@@ -2798,6 +2813,15 @@
                 if(countElem) countElem.innerText = count;
             });
 
+            function refreshTodayActiveUserCount() {
+                const dayKey = doraLocalDateKey();
+                rtdb.ref('activeUsersByDay/' + dayKey).on('value', (snapshot) => {
+                    const activeCountElem = document.getElementById('todayActiveUsersCount');
+                    if (activeCountElem) activeCountElem.innerText = Object.keys(snapshot.val() || {}).length;
+                });
+            }
+            refreshTodayActiveUserCount();
+
             window.addEventListener('popstate', function(event) {
                 const universalModal = document.getElementById('universalModal');
                 const dmcaModal = document.getElementById('dmcaModal');
@@ -2971,6 +2995,32 @@
 
         // One-time unlock / anonymous device registration
         const DORA_INSTALL_KEY = 'doraInstallRegistrationId';
+
+        function doraLocalDateKey() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        // Register each installation once; Firebase keys keep the count idempotent.
+        async function registerDoraInstallation(installId) {
+            if (!installId || installId === '1111') return;
+            const userRef = rtdb.ref('users/' + installId);
+            await userRef.transaction(current => current || {
+                installId: installId,
+                registeredAt: firebase.database.ServerValue.TIMESTAMP,
+                platform: 'webview'
+            });
+        }
+
+        // Count a device once per local calendar day when it confirms the daily notice.
+        async function recordDoraDailyActive(installId) {
+            if (!installId || installId === '1111') return;
+            const dayKey = doraLocalDateKey();
+            await rtdb.ref('activeUsersByDay/' + dayKey + '/' + installId).transaction(current => current || {
+                confirmedAt: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+
         // First-open unlock: immediately dismiss welcome screen and show Home.
         async function unlockCourses() {
             const btn = document.getElementById('unlockCoursesBtn');
@@ -2993,6 +3043,13 @@
                 currentUser = installId;
                 localStorage.setItem('doradoraUser', installId);
                 localStorage.setItem('doraCoursesUnlocked', '1');
+
+                // Count this installation once in Firebase; retries won't inflate totals.
+                try {
+                    await registerDoraInstallation(installId);
+                } catch (registrationError) {
+                    console.error('User registration count could not be synced:', registrationError);
+                }
 
                 // Switch immediately; Home shows the download progress if needed.
                 switchScreen('homeScreen');
@@ -3687,6 +3744,41 @@
             }, 600);
         }
 
+        function isMediaDeliveryPlayerUrl(rawUrl) {
+            try {
+                const parsed = new URL((rawUrl || '').trim());
+                return parsed.hostname.toLowerCase() === 'player.mediadelivery.net';
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function loadMediaDeliveryPage(rawUrl) {
+            const url = sanitizeVideoUrl(rawUrl);
+            const container = document.getElementById('modalBodyContent');
+            if (!container || !url) return;
+            if (currentHlsInstance) {
+                try { currentHlsInstance.destroy(); } catch (e) {}
+                currentHlsInstance = null;
+            }
+            if (activeVideoTag) {
+                try { activeVideoTag.pause(); } catch (e) {}
+                activeVideoTag = null;
+            }
+            hideSeekControls();
+            const settings = document.getElementById('playerSettingsContainer');
+            if (settings) settings.style.display = 'none';
+            container.innerHTML = '';
+            const frame = document.createElement('iframe');
+            frame.src = url;
+            frame.title = 'Video player';
+            frame.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
+            frame.setAttribute('allowfullscreen', '');
+            frame.setAttribute('referrerpolicy', 'origin');
+            frame.style.cssText = 'width:100%;height:100%;border:0;background:#000;';
+            container.appendChild(frame);
+        }
+
         function openVideoModal(lecIdx) {
             // Check Access Token Validity (Controlled by Admin Settings)
             if (!isUserVideoAccessValid()) {
@@ -3723,7 +3815,15 @@
 
             currentPlaybackRate = 1.0;
 
-            if (liveStream && isYouTubeUrl(liveStream)) {
+            // Bunny Stream's player URL is a webpage/player, not a raw video file.
+            // Open only this host in an in-app iframe; preserve existing MP4/HLS/Archive.org handling.
+            const mediaDeliveryUrl = isMediaDeliveryPlayerUrl(liveStream)
+                ? liveStream
+                : Object.values(currentLectureVideos).find(isMediaDeliveryPlayerUrl);
+
+            if (mediaDeliveryUrl) {
+                loadMediaDeliveryPage(mediaDeliveryUrl);
+            } else if (liveStream && isYouTubeUrl(liveStream)) {
                 settingsContainer.style.display = 'none';
                 hideSeekControls();
                 loadYouTubeVideo(liveStream);
