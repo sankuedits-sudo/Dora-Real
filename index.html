@@ -1647,6 +1647,11 @@
                     <input type="text" id="adminTokenLinkInput" placeholder="https://t.me/YourBot?start=gettoken" style="flex:1; padding:8px; background:#222; border:1px solid #444; color:#fff; border-radius:6px; font-size:11px;">
                     <button onclick="saveTokenShortenerLink()" style="background:#24a1ee; color:#fff; border:none; padding:8px 12px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:bold;">Save Link</button>
                 </div>
+                <label style="font-size:11px; color:#aaa; display:block; margin-top:12px; margin-bottom:4px;">“KEY KAISE MILEGA” Help Webpage URL:</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="url" id="adminTokenHelpUrlInput" placeholder="https://example.com/how-to-get-key" style="flex:1; min-width:0; padding:8px; background:#222; border:1px solid #444; color:#fff; border-radius:6px; font-size:11px;">
+                    <button onclick="saveTokenHelpUrl()" style="background:#24a1ee; color:#fff; border:none; padding:8px 12px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:bold;">Save Help URL</button>
+                </div>
 
                 <div style="margin-top:10px; background:#111; border:1px solid #292929; border-radius:8px; padding:9px; font-size:10px; color:#888; line-height:1.5;">
                     <b style="color:#ddd;">Token rule:</b> har token sirf <b style="color:#fff;">1 baar</b> claim hoga. Successful claim ke baad current device ko selected duration tak access milega.
@@ -1906,6 +1911,11 @@
 
             <a id="tokenRedirectBtn" href="#" target="_blank" class="token-get-link-btn">
                 <span>⚡</span> 1. Get Access Token (Shortener)
+            </a>
+            <a id="tokenHelpBtn" href="#" target="_blank" rel="noopener noreferrer"
+               class="token-get-link-btn"
+               style="background:linear-gradient(135deg,#292d38,#171a22);border:1px solid #454957;box-shadow:none;margin-top:-5px;">
+                <span>🔑</span> KEY KAISE MILEGA
             </a>
 
             <div style="font-size:11px; color:#8e8e93; margin-bottom:6px; text-align:left;">Paste the verified token below:</div>
@@ -2609,6 +2619,28 @@
             }
         }
 
+        function saveTokenHelpUrl() {
+            const input = document.getElementById('adminTokenHelpUrlInput');
+            const link = input ? input.value.trim() : '';
+
+            if (!link || !/^https?:\/\//i.test(link)) {
+                alert('Kripya valid help webpage URL (https://...) enter karein.');
+                return;
+            }
+
+            appSettings.tokenHelpUrl = link;
+            localStorage.setItem('dora_cached_settings', JSON.stringify(appSettings));
+
+            rtdb.ref('settings/tokenHelpUrl').set(link, (err) => {
+                if (!err) {
+                    alert('KEY KAISE MILEGA help webpage URL updated successfully!');
+                    applySettingsUI(appSettings);
+                } else {
+                    alert('Error: ' + err.message);
+                }
+            });
+        }
+
         function saveTokenHoursSetting() {
             const input = document.getElementById('adminTokenHoursInput');
             const val = Number(input ? input.value.trim() : 24);
@@ -2725,6 +2757,23 @@
 
             const tokenRedirectBtn = document.getElementById('tokenRedirectBtn');
             if (tokenRedirectBtn) tokenRedirectBtn.href = tokenLink;
+
+            const tokenHelpUrl = settings.tokenHelpUrl || '';
+            const tokenHelpBtn = document.getElementById('tokenHelpBtn');
+            if (tokenHelpBtn) {
+                tokenHelpBtn.href = tokenHelpUrl || '#';
+                tokenHelpBtn.style.display = tokenHelpUrl ? 'flex' : 'none';
+                tokenHelpBtn.onclick = function(event) {
+                    if (!tokenHelpUrl) {
+                        event.preventDefault();
+                        alert('Admin ne abhi KEY KAISE MILEGA webpage set nahi kiya hai.');
+                    }
+                };
+            }
+            const adminTokenHelpInput = document.getElementById('adminTokenHelpUrlInput');
+            if (adminTokenHelpInput && !adminTokenHelpInput.matches(':focus')) {
+                adminTokenHelpInput.value = tokenHelpUrl;
+            }
 
             const tokenHours = (settings.tokenHours === undefined || settings.tokenHours === null)
                 ? 24
@@ -3004,6 +3053,9 @@
         // Register each installation once; Firebase keys keep the count idempotent.
         async function registerDoraInstallation(installId) {
             if (!installId || installId === '1111') return;
+            // A stable installId is created only when UNLOCK YOUR COURSES is tapped.
+            // RTDB transaction creates one record per installation, so retries and
+            // other popups (WhatsApp / student advisory) never increase this count.
             const userRef = rtdb.ref('users/' + installId);
             await userRef.transaction(current => current || {
                 installId: installId,
