@@ -2259,53 +2259,21 @@
             rtdb.ref('lastUpdated').set(now);
         }
 
-        // Smart course sync: cached data is shown immediately. Cloud data is downloaded
-        // only when the server's lastUpdated version changes (or there is no local cache).
-        let lastSeenServerCourseVersion = null;
-        let courseVersionCheckInFlight = false;
-
-        async function checkForCourseUpdates() {
-            if (courseVersionCheckInFlight) return;
-            courseVersionCheckInFlight = true;
-            try {
-                const snap = await rtdb.ref('lastUpdated').once('value');
-                const serverVersion = Number(snap.val()) || 0;
+        function initSmartDataSync() {
+            rtdb.ref('lastUpdated').on('value', async (snap) => {
+                const serverVersion = snap.val() || 0;
                 const localVersion = Number(localStorage.getItem('dora_cached_version')) || 0;
-                const cachedCourses = await getCachedData('doradora_cached_courses');
-                lastSeenServerCourseVersion = serverVersion;
 
-                if (!cachedCourses || typeof cachedCourses !== 'object' || Object.keys(cachedCourses).length === 0 || serverVersion > localVersion) {
+                const cachedCourses = await getCachedData('doradora_cached_courses');
+
+                if (!cachedCourses || serverVersion > localVersion) {
                     fetchCoursesWithProgress(serverVersion);
                 } else {
                     coursesData = cachedCourses;
                     isCoursesLoaded = true;
                     refreshCurrentActiveView();
                 }
-            } catch (err) {
-                console.warn('Course version check failed; keeping cached courses:', err);
-                const cachedCourses = await getCachedData('doradora_cached_courses');
-                if (cachedCourses && typeof cachedCourses === 'object') {
-                    coursesData = cachedCourses;
-                    isCoursesLoaded = true;
-                    refreshCurrentActiveView();
-                }
-            } finally {
-                courseVersionCheckInFlight = false;
-            }
-        }
-
-        function initSmartDataSync() {
-            // A single version listener detects admin changes while the app is open.
-            rtdb.ref('lastUpdated').on('value', async (snap) => {
-                const serverVersion = Number(snap.val()) || 0;
-                const localVersion = Number(localStorage.getItem('dora_cached_version')) || 0;
-                const cachedCourses = await getCachedData('doradora_cached_courses');
-                lastSeenServerCourseVersion = serverVersion;
-
-                if (!cachedCourses || typeof cachedCourses !== 'object' || Object.keys(cachedCourses).length === 0 || serverVersion > localVersion) {
-                    fetchCoursesWithProgress(serverVersion);
-                }
-            }, (err) => console.warn('Course update listener error:', err));
+            });
         }
 
         function updateCoursesProgressUI(percent, text) {
@@ -2327,18 +2295,9 @@
             fetchCoursesWithProgress();
         }
 
-        async function fetchCoursesWithProgress(serverVersion = null) {
+        function fetchCoursesWithProgress(serverVersion = null) {
             if (isSyncingInBackground) return;
             isSyncingInBackground = true;
-            if (serverVersion === null || serverVersion === undefined) {
-                try {
-                    const versionSnap = await rtdb.ref('lastUpdated').once('value');
-                    serverVersion = Number(versionSnap.val()) || 0;
-                } catch (versionError) {
-                    // Keep the current version if the version endpoint is temporarily unavailable.
-                    serverVersion = Number(localStorage.getItem('dora_cached_version')) || 0;
-                }
-            }
 
             if (!coursesData || Object.keys(coursesData).length === 0) {
                 isCoursesLoaded = false;
@@ -2367,20 +2326,15 @@
                 isSyncingInBackground = false;
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
-                        updateCoursesProgressUI(100, 'Saving updated course library...');
+                        updateCoursesProgressUI(100, 'Saving to secure local memory...');
                         const parsedCourses = JSON.parse(xhr.responseText);
                         coursesData = (parsedCourses && typeof parsedCourses === 'object') ? parsedCourses : {};
                         await setCachedData('doradora_cached_courses', coursesData);
                         
-                        // Never replace the server version with the device clock: doing so can
-                        // prevent future updates from being detected if the device clock is ahead.
-                        if (Number.isFinite(Number(serverVersion))) {
-                            localStorage.setItem('dora_cached_version', String(Number(serverVersion)));
-                        }
+                        const newVersion = serverVersion || Date.now();
+                        localStorage.setItem('dora_cached_version', newVersion);
 
                         isCoursesLoaded = true;
-                        const progressBar = document.getElementById('courseProgressBarFill');
-                        if (progressBar) progressBar.style.background = '';
                         refreshCurrentActiveView();
                     } catch(e) {
                         console.error("Course JSON/cache error:", e);
@@ -2870,19 +2824,20 @@
 
             initSmartDataSync();
 
-            // Check the server version on launch. Do NOT blindly download the full courses
-            // JSON again: if it has not changed, the IndexedDB cache is reused instantly.
-            setTimeout(checkForCourseUpdates, 250);
+            // Always check the cloud on every app launch, even when a local cache exists.
+            // Cached courses remain visible immediately; this refresh runs in the background.
+            setTimeout(() => {
+                if (!isSyncingInBackground) fetchCoursesWithProgress();
+            }, 700);
 
-            // When the WebView returns to foreground, check only the small version value.
-            // The full course JSON is fetched only if lastUpdated has actually changed.
+            // Refresh again when the WebView/app returns to the foreground.
             let lastForegroundRefresh = 0;
             function refreshCoursesOnForeground() {
                 const now = Date.now();
                 if (document.visibilityState === 'hidden') return;
                 if (now - lastForegroundRefresh < 5000) return;
                 lastForegroundRefresh = now;
-                checkForCourseUpdates();
+                if (!isSyncingInBackground) fetchCoursesWithProgress();
             }
             document.addEventListener('visibilitychange', refreshCoursesOnForeground);
             window.addEventListener('pageshow', refreshCoursesOnForeground);
