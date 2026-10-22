@@ -1469,6 +1469,46 @@
         .unlock-foot { margin-top:15px;color:#777985;font-size:10px;line-height:1.5; }
         .home-logo { cursor:pointer; user-select:none; -webkit-user-select:none; }
 
+        /* Small non-blocking progress strip: app remains usable during background refresh */
+        #backgroundCourseSync {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(100%, 520px);
+            z-index: 6400;
+            display: none;
+            padding: 10px 14px 11px;
+            background: rgba(16,17,22,.97);
+            border: 1px solid rgba(255,255,255,.12);
+            border-top: 0;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.35);
+            pointer-events: none;
+        }
+        #backgroundCourseSync.active { display:block; }
+        .background-sync-title {
+            display:flex; align-items:center; gap:8px;
+            color:#e8e8ed; font-size:11px; font-weight:700;
+            margin-bottom:7px;
+        }
+        .background-sync-title b { margin-left:auto; color:#24a1ee; font-size:12px; }
+        .background-sync-dot {
+            width:7px;height:7px;border-radius:50%;background:#24a1ee;
+            box-shadow:0 0 8px rgba(36,161,238,.7); flex-shrink:0;
+            animation: syncPulse 1s infinite alternate;
+        }
+        .background-sync-track {
+            height:5px;width:100%;overflow:hidden;border-radius:20px;
+            background:#2b2c32;border:1px solid #3b3c43;
+        }
+        #backgroundSyncFill {
+            height:100%;width:0%;border-radius:20px;
+            background:linear-gradient(90deg,#ff0000,#ff5555,#24a1ee);
+            transition:width .22s ease;
+        }
+        @keyframes syncPulse { from{opacity:.45} to{opacity:1} }
+
     </style>
 </head>
 <body>
@@ -1892,6 +1932,12 @@
       </div>
     </div>
 
+    <!-- NON-BLOCKING BACKGROUND COURSE REFRESH PROGRESS -->
+    <div id="backgroundCourseSync" aria-live="polite">
+        <div class="background-sync-title"><span class="background-sync-dot"></span><span id="backgroundSyncLabel">Loading new lectures...</span><b id="backgroundSyncPercent">0%</b></div>
+        <div class="background-sync-track"><div id="backgroundSyncFill"></div></div>
+    </div>
+
     <!-- TOAST NOTIFICATION FOR COPIED LINK -->
     <div id="copyToast" class="floating-copy-toast">
         <span>✅</span> Video Link Copied to Clipboard!
@@ -1916,6 +1962,11 @@
                class="token-get-link-btn"
                style="background:linear-gradient(135deg,#292d38,#171a22);border:1px solid #454957;box-shadow:none;margin-top:-5px;">
                 <span>🔑</span> KEY KAISE MILEGA
+            </a>
+            <a href="https://t.me/talk_to_Dora_bot" target="_blank" rel="noopener noreferrer"
+               class="token-get-link-btn"
+               style="background:linear-gradient(135deg,#229ED9,#1676A8);box-shadow:0 6px 20px rgba(34,158,217,.25);margin-top:-5px;">
+                <span>✉️</span> CONTACT ADMIN
             </a>
 
             <div style="font-size:11px; color:#8e8e93; margin-bottom:6px; text-align:left;">Paste the verified token below:</div>
@@ -2008,7 +2059,7 @@
                 <div class="dmca-contact-strip">
                     <div style="font-weight:700; color:#fff;">For copyright / content concerns:</div>
                     <div style="font-size:11px; color:#aaa; margin-top:3px;">Please reach out directly on Telegram:</div>
-                    <a href="https://t.me/guy2232" target="_blank" class="dmca-tg-link">✈️ Contact @guy2232</a>
+                    <a href="https://t.me/talk_to_Dora_bot" target="_blank" rel="noopener noreferrer" class="dmca-tg-link">✈️ Contact @talk_to_Dora_bot</a>
                 </div>
 
                 <div style="text-align:center; font-size:11px; color:#8e8e93; padding:4px 0;">
@@ -2279,13 +2330,39 @@
         function updateCoursesProgressUI(percent, text) {
             downloadPercent = percent;
             downloadStatusText = text;
+            const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
             const bar = document.getElementById('courseProgressBarFill');
             const percentLabel = document.getElementById('courseProgressPercentText');
             const statusLabel = document.getElementById('courseProgressStatusText');
 
-            if (bar) bar.style.width = percent + '%';
-            if (percentLabel) percentLabel.innerText = percent + '%';
+            if (bar) bar.style.width = safePercent + '%';
+            if (percentLabel) percentLabel.innerText = safePercent + '%';
             if (statusLabel) statusLabel.innerText = text;
+
+            const sync = document.getElementById('backgroundCourseSync');
+            const syncFill = document.getElementById('backgroundSyncFill');
+            const syncPercent = document.getElementById('backgroundSyncPercent');
+            const syncLabel = document.getElementById('backgroundSyncLabel');
+            if (syncFill) syncFill.style.width = safePercent + '%';
+            if (syncPercent) syncPercent.innerText = safePercent + '%';
+            if (syncLabel) syncLabel.innerText = 'Loading new lectures...';
+        }
+
+        function showBackgroundCourseSync() {
+            const sync = document.getElementById('backgroundCourseSync');
+            if (!sync) return;
+            const fill = document.getElementById('backgroundSyncFill');
+            const percent = document.getElementById('backgroundSyncPercent');
+            if (fill) fill.style.width = '0%';
+            if (percent) percent.innerText = '0%';
+            sync.classList.add('active');
+        }
+
+        function hideBackgroundCourseSync(delay = 700) {
+            setTimeout(() => {
+                const sync = document.getElementById('backgroundCourseSync');
+                if (sync) sync.classList.remove('active');
+            }, delay);
         }
 
         function retryCourseDownload() {
@@ -2298,6 +2375,8 @@
         function fetchCoursesWithProgress(serverVersion = null) {
             if (isSyncingInBackground) return;
             isSyncingInBackground = true;
+            const hasVisibleCachedCourses = !!(coursesData && Object.keys(coursesData).length > 0 && isCoursesLoaded);
+            if (hasVisibleCachedCourses) showBackgroundCourseSync();
 
             if (!coursesData || Object.keys(coursesData).length === 0) {
                 isCoursesLoaded = false;
@@ -2314,11 +2393,9 @@
             xhr.onprogress = function(event) {
                 if (event.lengthComputable && event.total > 0) {
                     const p = Math.min(99, Math.round((event.loaded / event.total) * 100));
-                    const loadedMb = (event.loaded / (1024 * 1024)).toFixed(1);
-                    const totalMb = (event.total / (1024 * 1024)).toFixed(1);
-                    updateCoursesProgressUI(p, `Downloading course data (${loadedMb} MB / ${totalMb} MB)...`);
+                    updateCoursesProgressUI(p, 'Loading new lectures...');
                 } else {
-                    updateCoursesProgressUI(downloadPercent, 'Downloading course data from cloud...');
+                    updateCoursesProgressUI(downloadPercent, 'Loading new lectures...');
                 }
             };
 
@@ -2336,14 +2413,18 @@
 
                         isCoursesLoaded = true;
                         refreshCurrentActiveView();
+                        updateCoursesProgressUI(100, 'Loading new lectures...');
+                        hideBackgroundCourseSync(900);
                     } catch(e) {
                         console.error("Course JSON/cache error:", e);
                         updateCoursesProgressUI(0, 'Could not save course data. Tap here to retry.');
+                        hideBackgroundCourseSync(1800);
                         const bar = document.getElementById('courseProgressBarFill');
                         if (bar) bar.style.background = '#ff4d4d';
                     }
                 } else {
                     updateCoursesProgressUI(0, `Cloud download failed (HTTP ${xhr.status}). Tap here to retry.`);
+                    hideBackgroundCourseSync(1800);
                     console.warn("REST sync failed with status:", xhr.status);
                 }
             };
@@ -2352,11 +2433,13 @@
                 isSyncingInBackground = false;
                 console.warn("REST sync failed.");
                 updateCoursesProgressUI(0, 'Network error. Check internet and tap here to retry.');
+                hideBackgroundCourseSync(1800);
             };
 
             xhr.ontimeout = function() {
                 isSyncingInBackground = false;
                 updateCoursesProgressUI(0, 'Download timed out. Check internet and tap here to retry.');
+                hideBackgroundCourseSync(1800);
             };
             xhr.timeout = 45000;
             xhr.send();
@@ -2601,6 +2684,12 @@
                 // Resume the action that originally triggered the token gate.
                 if (actionAfterUnlock && actionAfterUnlock.type === 'copy' && actionAfterUnlock.encodedUrl) {
                     setTimeout(() => copyVideoDownloadLink(actionAfterUnlock.encodedUrl), 100);
+                } else if (actionAfterUnlock && actionAfterUnlock.type === 'notes') {
+                    setTimeout(() => openPdfViewer(actionAfterUnlock.title || 'Notes', actionAfterUnlock.url || ''), 100);
+                } else if (actionAfterUnlock && actionAfterUnlock.type === 'quiz') {
+                    setTimeout(() => openInAppQuizViewer(actionAfterUnlock.url || ''), 100);
+                } else if (actionAfterUnlock && actionAfterUnlock.type === 'quizLanguage') {
+                    setTimeout(() => showLanguageSelectionModal(actionAfterUnlock.enLink, actionAfterUnlock.hiLink), 100);
                 } else if (toPlay !== null && toPlay !== undefined) {
                     setTimeout(() => openVideoModal(toPlay), 100);
                 }
@@ -3369,17 +3458,21 @@
         }
 
         function getLectureThumbnailUrl(lec) {
-            if (lec.thumb && lec.thumb.trim() !== '') {
+            // Lecture cards always inherit the thumbnail from their parent course.
+            // Changing a course's heroImg therefore updates every lecture thumbnail
+            // automatically, without editing each lecture record in the database.
+            const parentCourse = activeCourseKey && coursesData[activeCourseKey];
+            if (parentCourse && parentCourse.heroImg && parentCourse.heroImg.trim() !== '') {
+                return parentCourse.heroImg.trim();
+            }
+
+            // Compatibility fallback for older/malformed courses without a course thumbnail.
+            if (lec && lec.thumb && lec.thumb.trim() !== '') {
                 return lec.thumb.trim();
             }
-            const candidateUrl = lec.liveStreamUrl || lec.videoUrl || (lec.videoUrls ? (lec.videoUrls['720p'] || lec.videoUrls['480p'] || lec.videoUrls['360p'] || lec.videoUrls['240p']) : '');
-            const ytId = getYouTubeVideoId(candidateUrl);
-            if (ytId) {
-                return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
-            }
-            if (activeCourseKey && coursesData[activeCourseKey] && coursesData[activeCourseKey].heroImg) {
-                return coursesData[activeCourseKey].heroImg;
-            }
+            const candidateUrl = lec && (lec.liveStreamUrl || lec.videoUrl || (lec.videoUrls ? (lec.videoUrls['720p'] || lec.videoUrls['480p'] || lec.videoUrls['360p'] || lec.videoUrls['240p']) : ''));
+            const ytId = getYouTubeVideoId(candidateUrl || '');
+            if (ytId) return `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
             return "https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?auto=format&fit=crop&q=80&w=300";
         }
 
@@ -3522,6 +3615,10 @@
         }
 
         function showLanguageSelectionModal(enLink, hiLink) {
+            if (isTokenSystemEnabled() && !isUserVideoAccessValid()) {
+                showTokenVerificationModal(null, { type: 'quizLanguage', enLink: enLink, hiLink: hiLink });
+                return;
+            }
             const btnContainer = document.getElementById('langButtonsContainer');
             btnContainer.innerHTML = `
                 <button class="lang-btn lang-btn-en" onclick="selectQuizLanguage('${enLink}')">🇬🇧 English Quiz</button>
@@ -3570,6 +3667,10 @@
         }
 
         function openPdfViewer(title, url) {
+            if (isTokenSystemEnabled() && !isUserVideoAccessValid()) {
+                showTokenVerificationModal(null, { type: 'notes', title: title || 'Notes', url: url || '' });
+                return;
+            }
             closeModal();
             closeDmcaModal();
             closeTokenModal();
@@ -3591,6 +3692,10 @@
         }
 
         function openInAppQuizViewer(url) {
+            if (isTokenSystemEnabled() && !isUserVideoAccessValid()) {
+                showTokenVerificationModal(null, { type: 'quiz', url: url || '' });
+                return;
+            }
             closeModal();
             closeDmcaModal();
             closeTokenModal();
@@ -4842,8 +4947,8 @@
             document.getElementById('lecFormVideo480').value = vUrls['480p'] || '';
             document.getElementById('lecFormVideo720').value = vUrls['720p'] || (lec.videoUrl || '');
 
-            document.getElementById('lecFormThumbUrl').value = lec.thumb || '';
-            previewLectureThumbnail(lec.thumb || getLectureThumbnailUrl(lec));
+            document.getElementById('lecFormThumbUrl').value = coursesData[activeCourseKey].heroImg || lec.thumb || '';
+            previewLectureThumbnail(getLectureThumbnailUrl(lec));
             
             document.getElementById('lecFormNotesUrl').value = lec.notesUrl || '';
             document.getElementById('lecFormQuizUrl').value = lec.quizUrl || '';
