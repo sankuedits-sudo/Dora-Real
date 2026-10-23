@@ -2519,19 +2519,48 @@
             setTimeout(() => showWhatsAppPopup(), 450);
         }
 
-        // Android WebView often ignores target=_blank/window.open unless the
-        // native app enables multiple windows. Navigate in the current WebView
-        // so the Telegram/shortener link always receives the tap.
+        // Open Telegram outside the embedded WebView where possible.
+        // Telegram may block its t.me page inside Android WebView (ERR_BLOCKED_BY_RESPONSE).
+        // For direct t.me bot links, try the native Telegram deep link first and
+        // then fall back to the HTTPS link if Telegram is not installed/handled.
         function openDoraTokenLink(event, rawUrl) {
             if (event) {
                 event.preventDefault();
                 event.stopPropagation();
             }
+
             const url = String(rawUrl || '').trim();
-            if (!/^https?:\/\//i.test(url) || url === '#' || url.endsWith('/t.me/')) {
-                alert('Telegram link set nahi hai. Admin panel mein Token Bot Link save karein.');
+            if (!/^https?:\/\//i.test(url) || url === '#') {
+                alert('Link set nahi hai. Admin panel mein Token Bot Link / Help URL save karein.');
                 return false;
             }
+
+            let parsed;
+            try { parsed = new URL(url); }
+            catch (_) {
+                alert('Link sahi format mein nahi hai. Admin panel mein https:// wala link save karein.');
+                return false;
+            }
+
+            const host = parsed.hostname.toLowerCase();
+            if (host === 't.me' || host === 'telegram.me' || host === 'www.t.me') {
+                const path = parsed.pathname.replace(/^\/+|\/+$/g, '');
+                // Use Telegram's app URI, preserving the bot's ?start= parameter.
+                const tgUrl = 'tg://resolve?domain=' + encodeURIComponent(path) +
+                    (parsed.searchParams.has('start') ? '&start=' + encodeURIComponent(parsed.searchParams.get('start')) : '');
+                let fallbackTimer = setTimeout(function () {
+                    try { window.location.href = url; } catch (_) {}
+                }, 900);
+                try {
+                    window.location.href = tgUrl;
+                } catch (_) {
+                    clearTimeout(fallbackTimer);
+                    window.location.href = url;
+                }
+                return false;
+            }
+
+            // Shortener/help URLs remain HTTPS and keep their full query string.
             window.location.href = url;
             return false;
         }
