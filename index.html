@@ -1955,15 +1955,15 @@
                 Video dekhne ke liye token verify karein. Token pane ke liye button dabakar link shortener complete karein.
             </div>
 
-            <a id="tokenRedirectBtn" href="#" target="_blank" class="token-get-link-btn">
+            <a id="tokenRedirectBtn" href="#" class="token-get-link-btn" onclick="return openDoraTokenLink(event, this.href)">
                 <span>⚡</span> 1. Get Access Token (Shortener)
             </a>
-            <a id="tokenHelpBtn" href="#" target="_blank" rel="noopener noreferrer"
+            <a id="tokenHelpBtn" href="#" rel="noopener noreferrer" onclick="return openDoraTokenLink(event, this.href)"
                class="token-get-link-btn"
                style="background:linear-gradient(135deg,#292d38,#171a22);border:1px solid #454957;box-shadow:none;margin-top:-5px;">
                 <span>🔑</span> KEY KAISE MILEGA
             </a>
-            <a href="https://t.me/talk_to_Dora_bot" target="_blank" rel="noopener noreferrer"
+            <a href="https://t.me/talk_to_Dora_bot" rel="noopener noreferrer" onclick="return openDoraTokenLink(event, this.href)"
                class="token-get-link-btn"
                style="background:linear-gradient(135deg,#229ED9,#1676A8);box-shadow:0 6px 20px rgba(34,158,217,.25);margin-top:-5px;">
                 <span>✉️</span> CONTACT ADMIN
@@ -2519,6 +2519,23 @@
             setTimeout(() => showWhatsAppPopup(), 450);
         }
 
+        // Android WebView often ignores target=_blank/window.open unless the
+        // native app enables multiple windows. Navigate in the current WebView
+        // so the Telegram/shortener link always receives the tap.
+        function openDoraTokenLink(event, rawUrl) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            const url = String(rawUrl || '').trim();
+            if (!/^https?:\/\//i.test(url) || url === '#' || url.endsWith('/t.me/')) {
+                alert('Telegram link set nahi hai. Admin panel mein Token Bot Link save karein.');
+                return false;
+            }
+            window.location.href = url;
+            return false;
+        }
+
         /* ================= TOKEN & SETTINGS HANDLING ================= */
         function isTokenSystemEnabled() {
             return appSettings.tokenEnabled !== false;
@@ -2555,7 +2572,7 @@
 
             const hours = Number(appSettings.tokenHours);
             const durationText = (!Number.isFinite(hours) || hours === 0) ? 'Unlimited' : getTokenDurationText();
-            const redirectLink = appSettings.tokenShortenerLink || 'https://t.me/';
+            const redirectLink = appSettings.tokenShortenerLink || 'https://t.me/talk_to_Dora_bot';
 
             const titleElem = document.getElementById('tokenModalTitle');
             const descElem = document.getElementById('tokenModalDesc');
@@ -2840,7 +2857,7 @@
                 waDisplayMsg.innerText = waMessage.trim() ? waMessage : "Join our official WhatsApp channel for latest lectures, notes & important class updates!";
             }
 
-            const tokenLink = settings.tokenShortenerLink || 'https://t.me/';
+            const tokenLink = settings.tokenShortenerLink || 'https://t.me/talk_to_Dora_bot';
             const adminTokenLinkInput = document.getElementById('adminTokenLinkInput');
             if (adminTokenLinkInput && !adminTokenLinkInput.matches(':focus')) adminTokenLinkInput.value = tokenLink;
 
