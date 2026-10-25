@@ -2641,7 +2641,7 @@
             const btn = document.getElementById('verifyTokenBtn');
 
             if (!token) {
-                alert('Kripya token code enter karein!');
+                alert('Kripya token ya subscription code enter karein!');
                 return;
             }
 
@@ -2651,29 +2651,100 @@
             }
 
             if (btn) {
-                btn.innerText = 'Verifying Token...';
+                btn.innerText = 'Verifying Code...';
                 btn.disabled = true;
             }
 
             try {
+                // 1. Pehle Firebase me 30-day subscription code check karein.
+                // Agar code Firebase me nahi milta, to neeche purana Render API flow chalega.
+                const subSnap = await rtdb.ref('subscription_codes/' + token).get();
+
+                if (subSnap.exists()) {
+                    const subData = subSnap.val() || {};
+                    const currentDevice = String(
+                        currentUser ||
+                        localStorage.getItem('doraInstallRegistrationId') ||
+                        'device'
+                    );
+
+                    if (subData.status === 'invalid') {
+                        alert('❌ Ye code admin dwara block ya invalidate kar diya gaya hai!');
+                        resetTokenVerifyButton();
+                        return;
+                    }
+
+                    if (subData.used && String(subData.usedByDevice || '') !== currentDevice) {
+                        alert('⚠️ Ye code pehle hi kisi doosre device par use ho chuka hai! Ek code sirf ek user ke liye valid hota hai.');
+                        resetTokenVerifyButton();
+                        return;
+                    }
+
+                    const now = Date.now();
+                    if (subData.expiresAt && now > Number(subData.expiresAt)) {
+                        alert('⌛ Ye subscription code expire ho chuka hai (30 din poore ho gaye).');
+                        resetTokenVerifyButton();
+                        return;
+                    }
+
+                    const durationDays = Number(subData.durationDays) > 0 ? Number(subData.durationDays) : 30;
+                    // Code ko dobara enter karne par expiry extend nahi hogi; pehli activation ka expiry hi rahega.
+                    const expiryTimestamp = subData.used && subData.expiresAt
+                        ? Number(subData.expiresAt)
+                        : now + (durationDays * 24 * 60 * 60 * 1000);
+
+                    if (!subData.used) {
+                        await rtdb.ref('subscription_codes/' + token).update({
+                            used: true,
+                            usedByDevice: currentDevice,
+                            activatedAt: now,
+                            expiresAt: expiryTimestamp,
+                            status: 'active'
+                        });
+                    }
+
+                    localStorage.setItem('dora_token_expiry_timestamp', String(expiryTimestamp));
+                    localStorage.setItem('dora_token_access_version', String(appSettings.tokenAccessVersion || '1'));
+                    localStorage.setItem('dora_subscription_code', token);
+                    localStorage.setItem('dora_token_last_claimed', token);
+
+                    alert(`🎉 Premium Access Activated! Aapka account ${durationDays} dino ke liye unlock ho gaya hai.`);
+
+                    const toPlay = pendingLectureIndexToPlay;
+                    const actionAfterUnlock = pendingTokenAction;
+                    closeTokenModal();
+
+                    // Token unlock hone ke baad wahi action resume karein jisne verification maanga tha.
+                    if (actionAfterUnlock && actionAfterUnlock.type === 'copy' && actionAfterUnlock.encodedUrl) {
+                        setTimeout(() => copyVideoDownloadLink(actionAfterUnlock.encodedUrl), 100);
+                    } else if (actionAfterUnlock && actionAfterUnlock.type === 'notes') {
+                        setTimeout(() => openPdfViewer(actionAfterUnlock.title || 'Notes', actionAfterUnlock.url || ''), 100);
+                    } else if (actionAfterUnlock && actionAfterUnlock.type === 'quiz') {
+                        setTimeout(() => openInAppQuizViewer(actionAfterUnlock.url || ''), 100);
+                    } else if (actionAfterUnlock && actionAfterUnlock.type === 'quizLanguage') {
+                        setTimeout(() => showLanguageSelectionModal(actionAfterUnlock.enLink, actionAfterUnlock.hiLink), 100);
+                    } else if (toPlay !== null && toPlay !== undefined) {
+                        setTimeout(() => openVideoModal(toPlay), 100);
+                    }
+                    return;
+                }
+
+                // 2. Firebase subscription code nahi mila: purana Telegram/Render token API flow bilkul waise hi.
                 const appUser = String(currentUser || localStorage.getItem('dora_current_user') || 'guest');
 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 25000);
-
-                const response = await fetch(DORA_TOKEN_API_URL + '/api/token/verify', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        token: token,
-                        app_user: appUser
-                    }),
-                    signal: controller.signal
-                });
-
-                clearTimeout(timeoutId);
+                let response;
+                try {
+                    response = await fetch(DORA_TOKEN_API_URL + '/api/token/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: token, app_user: appUser }),
+                        signal: controller.signal
+                    });
+                } finally {
+                    clearTimeout(timeoutId);
+                }
 
                 let data = null;
                 try {
@@ -2688,14 +2759,13 @@
 
                 if (!data || data.ok !== true) {
                     const message = data && data.message ? String(data.message) : 'Invalid or already used token.';
-
                     if (/already been used|already used|used/i.test(message)) {
                         throw new Error('TOKEN_ALREADY_USED');
                     }
                     throw new Error('INVALID_TOKEN');
                 }
 
-                // The API is the source of truth for duration/version.
+                // Render API existing duration/version logic preserved.
                 const apiHours = Number(data.duration_hours);
                 const safeHours = Number.isFinite(apiHours) && apiHours >= 0
                     ? apiHours
@@ -2703,9 +2773,7 @@
                         ? Number(appSettings.tokenHours)
                         : 24);
 
-                const serverVersion = String(
-                    data.access_version || appSettings.tokenAccessVersion || '1'
-                );
+                const serverVersion = String(data.access_version || appSettings.tokenAccessVersion || '1');
 
                 if (safeHours === 0) {
                     localStorage.setItem('dora_token_expiry_timestamp', '-1');
@@ -2717,17 +2785,13 @@
                 localStorage.setItem('dora_token_access_version', serverVersion);
                 localStorage.setItem('dora_token_last_claimed', token);
 
-                const durationText = safeHours === 0
-                    ? 'Unlimited'
-                    : `${safeHours} hours`;
-
+                const durationText = safeHours === 0 ? 'Unlimited' : `${safeHours} hours`;
                 alert(`✅ Token Verified! ${durationText} ke liye video access unlock ho gaya.`);
 
                 const toPlay = pendingLectureIndexToPlay;
                 const actionAfterUnlock = pendingTokenAction;
                 closeTokenModal();
 
-                // Resume the action that originally triggered the token gate.
                 if (actionAfterUnlock && actionAfterUnlock.type === 'copy' && actionAfterUnlock.encodedUrl) {
                     setTimeout(() => copyVideoDownloadLink(actionAfterUnlock.encodedUrl), 100);
                 } else if (actionAfterUnlock && actionAfterUnlock.type === 'notes') {
@@ -2747,7 +2811,7 @@
                 } else if (err && err.message === 'TOKEN_ALREADY_USED') {
                     alert('⚠️ Ye token pehle hi use ho chuka hai. Har token sirf ek baar valid hota hai.');
                 } else {
-                    console.error('Token API verification error:', err);
+                    console.error('Token verification error:', err);
                     alert('⚠️ Token verification server se connect nahi ho pa raha. Internet/API check karke dobara try karein.');
                 }
                 resetTokenVerifyButton();
