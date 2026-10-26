@@ -2156,6 +2156,8 @@
         let downloadPercent = 0;
         let downloadStatusText = 'Checking for updates...';
         let isSyncingInBackground = false;
+        // Show byte/MB details only during the first course-library download.
+        let showInitialDownloadMB = false;
 
         let currentLectureVideos = {};
         let currentSelectedQuality = null;
@@ -2391,11 +2393,26 @@
             xhr.responseType = 'text';
 
             xhr.onprogress = function(event) {
+                const mbLabel = document.getElementById('courseProgressMBText');
+
+                if (showInitialDownloadMB && mbLabel) {
+                    const loadedMB = event.loaded / (1024 * 1024);
+                    if (event.lengthComputable && event.total > 0) {
+                        const totalMB = event.total / (1024 * 1024);
+                        const remainingMB = Math.max(0, (event.total - event.loaded) / (1024 * 1024));
+                        mbLabel.style.display = 'block';
+                        mbLabel.innerText = `${loadedMB.toFixed(2)} MB downloaded / ${totalMB.toFixed(2)} MB total · ${remainingMB.toFixed(2)} MB remaining`;
+                    } else {
+                        mbLabel.style.display = 'block';
+                        mbLabel.innerText = `${loadedMB.toFixed(2)} MB downloaded · Total size unavailable`;
+                    }
+                }
+
                 if (event.lengthComputable && event.total > 0) {
                     const p = Math.min(99, Math.round((event.loaded / event.total) * 100));
-                    updateCoursesProgressUI(p, 'Loading new lectures...');
+                    updateCoursesProgressUI(p, showInitialDownloadMB ? 'Downloading course library...' : 'Loading new lectures...');
                 } else {
-                    updateCoursesProgressUI(downloadPercent, 'Loading new lectures...');
+                    updateCoursesProgressUI(downloadPercent, showInitialDownloadMB ? 'Downloading course library...' : 'Loading new lectures...');
                 }
             };
 
@@ -2403,6 +2420,12 @@
                 isSyncingInBackground = false;
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
+                        const mbLabel = document.getElementById('courseProgressMBText');
+                        if (showInitialDownloadMB && mbLabel) {
+                            const finalMB = new Blob([xhr.responseText]).size / (1024 * 1024);
+                            mbLabel.style.display = 'block';
+                            mbLabel.innerText = `${finalMB.toFixed(2)} MB downloaded / ${finalMB.toFixed(2)} MB total · 0.00 MB remaining`;
+                        }
                         updateCoursesProgressUI(100, 'Saving to secure local memory...');
                         const parsedCourses = JSON.parse(xhr.responseText);
                         coursesData = (parsedCourses && typeof parsedCourses === 'object') ? parsedCourses : {};
@@ -2413,6 +2436,7 @@
 
                         isCoursesLoaded = true;
                         refreshCurrentActiveView();
+                        showInitialDownloadMB = false;
                         updateCoursesProgressUI(100, 'Loading new lectures...');
                         hideBackgroundCourseSync(900);
                     } catch(e) {
@@ -3349,6 +3373,7 @@
                     coursesData = {};
                     isCoursesLoaded = false;
                     downloadPercent = 0;
+                    showInitialDownloadMB = true;
                     updateCoursesProgressUI(0, 'Preparing your course library...');
                     renderUserCourses();
                 }
@@ -3418,6 +3443,8 @@
                         <div style="width:100%; height:10px; background:#262626; border-radius:20px; overflow:hidden; border:1px solid #383838; position:relative; margin-bottom:10px;">
                             <div id="courseProgressBarFill" style="width:${downloadPercent}%; height:100%; background:linear-gradient(90deg, #ff0000, #ff5555, #24a1ee); border-radius:20px; transition:width 0.25s ease;"></div>
                         </div>
+
+                        <div id="courseProgressMBText" style="display:${showInitialDownloadMB ? 'block' : 'none'}; color:#bfc2cc; font-size:10px; line-height:1.5; text-align:left; margin:0 0 8px;"></div>
 
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                             <div id="courseProgressStatusText" onclick="retryCourseDownload()" style="color:#aaa; font-size:11px; cursor:pointer;">${downloadStatusText}</div>
