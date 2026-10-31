@@ -3810,6 +3810,7 @@
             let url = (rawUrl || '').trim();
             if (!url) return '';
 
+            // Google Drive PDF links: keep the existing Drive-style preview.
             if (url.includes('drive.google.com')) {
                 let fileId = null;
                 const matchD = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
@@ -3817,15 +3818,12 @@
                     fileId = matchD[1];
                 } else {
                     const matchId = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-                    if (matchId && matchId[1]) {
-                        fileId = matchId[1];
-                    }
+                    if (matchId && matchId[1]) fileId = matchId[1];
                 }
-                if (fileId) {
-                    return `https://drive.google.com/file/d/${fileId}/preview`;
-                }
+                if (fileId) return `https://drive.google.com/file/d/${fileId}/preview`;
             }
 
+            // Google Docs/Sheets/Slides preview links retain their native preview behavior.
             if (url.includes('docs.google.com')) {
                 if (url.includes('/edit') || url.includes('/view')) {
                     return url.replace(/\/(edit|view)(\?.*)?$/, '/preview');
@@ -3833,7 +3831,21 @@
                 return url;
             }
 
-            return `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}`;
+            // Only actual PDF files should use Google's document viewer.
+            // For ordinary website/page links, load the original URL as a webpage.
+            let isPdfFile = false;
+            try {
+                const parsed = new URL(url);
+                isPdfFile = /\.pdf$/i.test(parsed.pathname);
+            } catch (e) {
+                isPdfFile = /\.pdf(?:[?#]|$)/i.test(url);
+            }
+
+            if (isPdfFile) {
+                return `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(url)}`;
+            }
+
+            return url;
         }
 
         function openPdfViewer(title, url) {
@@ -3847,10 +3859,21 @@
             const container = document.getElementById('modalBodyContent');
             document.getElementById('playerSettingsContainer').style.display = 'none';
             hideSeekControls();
-            
+
             const viewerUrl = formatPdfViewerUrl(url);
-            container.innerHTML = `<iframe src="${viewerUrl}" style="width:100%; height:100%; border:none; background:#fff;" allow="autoplay"></iframe>`;
-            
+            container.innerHTML = '';
+            if (!viewerUrl) {
+                alert('Invalid or empty link.');
+                return;
+            }
+            const frame = document.createElement('iframe');
+            frame.src = viewerUrl;
+            frame.style.cssText = 'width:100%;height:100%;border:none;background:#fff;';
+            frame.setAttribute('allow', 'autoplay');
+            frame.setAttribute('loading', 'eager');
+            frame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+            container.appendChild(frame);
+
             history.pushState({ modalOpen: true }, "");
             document.getElementById('universalModal').classList.add('active');
 
